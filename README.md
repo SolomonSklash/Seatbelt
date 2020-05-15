@@ -1,5 +1,10 @@
 # Seatbelt
 
+This is my fork/modification of Seatbelt that has support for writing the output to a file. This is likely not in line with 
+the OPSEC goals of the original prject, but it is nice to have the output in a file in situations when you are not concerned
+about dropping files to disk, such as Hack The Box or CTFs. This also removes the need to capture the output in the Cobalt
+Strike scrollback buffer, which can sometimes get cutoff when using Seatbelt with the `full`/`all` parameters.
+
 ----
 
 Seatbelt is a C# project that performs a number of security oriented host-survey "safety checks" relevant from both offensive and defensive security perspectives.
