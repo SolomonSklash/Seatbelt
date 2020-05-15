@@ -1,4 +1,22 @@
-﻿using System;
+﻿/*
+ * TODO:
+ * [ ] create argument for writing to a file and the file path
+ * [ ] check that we have write access to file path
+ * [ ] exit if we don't have write access to file path
+ * [x] create file object
+ * [x] check that we opened file object successfully
+ * [x] find out how to write to the file
+ * [ ] locate each Console.WriteLine and add a file write
+ * [ ] close the file at the end of the program
+ * 
+ * [x] Create class/function that takes a string to print and the file path
+ * [ ] Create input parameter for file path: /output:path
+ * [ ] Create FilterResults equivalent to check whether to log to file
+ * [ ] Handle case of path not existing/being writable (bool to control whether or not to write to file, and continue to write to standard out?)
+ * [ ] Create New overloaded print method to handle Console.Write as well as LogToFile.Write
+ */
+
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -17,10 +35,86 @@ using System.Text.RegularExpressions;
 using System.Web.Script.Serialization;
 using Microsoft.Win32;
 using System.Xml;
+using System.Runtime.CompilerServices;
+using System.Threading;
 
 namespace Seatbelt
 {
-    // used to fignal whether filtering should be done on results
+    // write to output file
+    public static class LogToFile
+    {
+        public static bool enableLogging = false;
+
+        private static string path = "";
+        public static void SetPath(string pathParam)
+        {
+            path = pathParam;
+            if (LogToFile.IsWritable())
+            {
+                LogToFile.SetWritable();
+            }
+        }
+        public static string GetPath()
+        {
+            return path;
+        }
+
+        public static bool writable = false;
+        private static bool GetWritable()
+        {
+            return writable;
+        }
+        private static void SetWritable()
+        {
+            writable = true;
+        }
+
+        public static void Write(string output)
+        {
+            if (LogToFile.GetWritable())
+            {
+                try
+                {
+                    using (StreamWriter sw = File.AppendText(LogToFile.GetPath()))
+                    {
+                        sw.WriteLine(output);
+                        sw.Close();
+                    }
+                }
+                catch
+                {
+                    Console.WriteLine("[!] Failed to write to {0}", LogToFile.GetPath());
+                }
+            }
+
+            return;
+        }
+
+        private static bool IsWritable()
+        {
+            try
+            {
+                FileStream fs = File.Create(LogToFile.GetPath());
+                fs.Close();
+            }
+            catch
+            {
+                return false;
+            }
+            
+            using (var fs = new FileStream(LogToFile.GetPath(), FileMode.Open))
+            {
+                var canWrite = fs.CanWrite;
+                if (canWrite)
+                    return true;
+                else
+                    return false;
+            }
+        }
+
+    }
+
+    // used to signal whether filtering should be done on results
     public static class FilterResults
     {
         public static bool filter = true;
@@ -150,7 +244,6 @@ namespace Seatbelt
         public extern static Int32 VaultGetItem_WIN7(IntPtr vaultHandle, ref Guid schemaId, IntPtr pResourceElement, IntPtr pIdentityElement, IntPtr zero, Int32 arg5, ref IntPtr passwordVaultPtr);
 
     }
-
 
     class Program
     {
@@ -572,7 +665,6 @@ namespace Seatbelt
             public readonly UInt64 OwningModuleInfo13;
             public readonly UInt64 OwningModuleInfo14;
             public readonly UInt64 OwningModuleInfo15;
-
 
             public ushort LocalPort
             {
@@ -1154,19 +1246,39 @@ namespace Seatbelt
 
         public static void PrintLogo()
         {
-            Console.WriteLine("\r\n\r\n                        %&&@@@&&                                                                                  ");
-            Console.WriteLine("                        &&&&&&&%%%,                       #&&@@@@@@%%%%%%###############%                         ");
-            Console.WriteLine("                        &%&   %&%%                        &////(((&%%%%%#%################//((((###%%%%%%%%%%%%%%%");
-            Console.WriteLine("%%%%%%%%%%%######%%%#%%####%  &%%**#                      @////(((&%%%%%%######################(((((((((((((((((((");
-            Console.WriteLine("#%#%%%%%%%#######%#%%#######  %&%,,,,,,,,,,,,,,,,         @////(((&%%%%%#%#####################(((((((((((((((((((");
-            Console.WriteLine("#%#%%%%%%#####%%#%#%%#######  %%%,,,,,,  ,,.   ,,         @////(((&%%%%%%%######################(#(((#(#((((((((((");
-            Console.WriteLine("#####%%%####################  &%%......  ...   ..         @////(((&%%%%%%%###############%######((#(#(####((((((((");
-            Console.WriteLine("#######%##########%#########  %%%......  ...   ..         @////(((&%%%%%#########################(#(#######((#####");
-            Console.WriteLine("###%##%%####################  &%%...............          @////(((&%%%%%%%%##############%#######(#########((#####");
-            Console.WriteLine("#####%######################  %%%..                       @////(((&%%%%%%%################                        ");
-            Console.WriteLine("                        &%&   %%%%%      Seatbelt         %////(((&%%%%%%%%#############*                         ");
-            Console.WriteLine("                        &%%&&&%%%%%        v0.2.0         ,(((&%%%%%%%%%%%%%%%%%,                                 ");
-            Console.WriteLine("                         #%%%%##,                                                                                 \r\n\r\n");
+            if (!LogToFile.enableLogging)
+            {
+                Console.WriteLine("\r\n\r\n                        %&&@@@&&                                                                                  ");
+                Console.WriteLine("                        &&&&&&&%%%,                       #&&@@@@@@%%%%%%###############%                         ");
+                Console.WriteLine("                        &%&   %&%%                        &////(((&%%%%%#%################//((((###%%%%%%%%%%%%%%%");
+                Console.WriteLine("%%%%%%%%%%%######%%%#%%####%  &%%**#                      @////(((&%%%%%%######################(((((((((((((((((((");
+                Console.WriteLine("#%#%%%%%%%#######%#%%#######  %&%,,,,,,,,,,,,,,,,         @////(((&%%%%%#%#####################(((((((((((((((((((");
+                Console.WriteLine("#%#%%%%%%#####%%#%#%%#######  %%%,,,,,,  ,,.   ,,         @////(((&%%%%%%%######################(#(((#(#((((((((((");
+                Console.WriteLine("#####%%%####################  &%%......  ...   ..         @////(((&%%%%%%%###############%######((#(#(####((((((((");
+                Console.WriteLine("#######%##########%#########  %%%......  ...   ..         @////(((&%%%%%#########################(#(#######((#####");
+                Console.WriteLine("###%##%%####################  &%%...............          @////(((&%%%%%%%%##############%#######(#########((#####");
+                Console.WriteLine("#####%######################  %%%..                       @////(((&%%%%%%%################                        ");
+                Console.WriteLine("                        &%&   %%%%%      Seatbelt         %////(((&%%%%%%%%#############*                         ");
+                Console.WriteLine("                        &%%&&&%%%%%        v0.2.0         ,(((&%%%%%%%%%%%%%%%%%,                                 ");
+                Console.WriteLine("                         #%%%%##,                                                                                 \r\n\r\n");
+
+            }
+            else
+            {
+                LogToFile.Write("\r\n\r\n                        %&&@@@&&                                                                                  ");
+                LogToFile.Write("                        &&&&&&&%%%,                       #&&@@@@@@%%%%%%###############%                         ");
+                LogToFile.Write("                        &%&   %&%%                        &////(((&%%%%%#%################//((((###%%%%%%%%%%%%%%%");
+                LogToFile.Write("%%%%%%%%%%%######%%%#%%####%  &%%**#                      @////(((&%%%%%%######################(((((((((((((((((((");
+                LogToFile.Write("#%#%%%%%%%#######%#%%#######  %&%,,,,,,,,,,,,,,,,         @////(((&%%%%%#%#####################(((((((((((((((((((");
+                LogToFile.Write("#%#%%%%%%#####%%#%#%%#######  %%%,,,,,,  ,,.   ,,         @////(((&%%%%%%%######################(#(((#(#((((((((((");
+                LogToFile.Write("#####%%%####################  &%%......  ...   ..         @////(((&%%%%%%%###############%######((#(#(####((((((((");
+                LogToFile.Write("#######%##########%#########  %%%......  ...   ..         @////(((&%%%%%#########################(#(#######((#####");
+                LogToFile.Write("###%##%%####################  &%%...............          @////(((&%%%%%%%%##############%#######(#########((#####");
+                LogToFile.Write("#####%######################  %%%..                       @////(((&%%%%%%%################                        ");
+                LogToFile.Write("                        &%&   %%%%%      Seatbelt         %////(((&%%%%%%%%#############*                         ");
+                LogToFile.Write("                        &%%&&&%%%%%        v0.2.0         ,(((&%%%%%%%%%%%%%%%%%,                                 ");
+                LogToFile.Write("                         #%%%%##,                                                                                 \r\n\r\n");
+            }
         }
 
         public static string GetRegValue(string hive, string path, string value)
@@ -1745,9 +1857,29 @@ namespace Seatbelt
             Console.WriteLine(String.Format("  {0,-30}:  {1}", "BootTime (approx)", BootTime));
             Console.WriteLine(String.Format("  {0,-30}:  {1}", "HighIntegrity", isHighIntegrity));
             Console.WriteLine(String.Format("  {0,-30}:  {1}", "IsLocalAdmin", isLocalAdmin));
+            if (LogToFile.enableLogging)
+            {
+                LogToFile.Write("\r\n\r\n=== Basic OS Information ===\r\n");
+                LogToFile.Write(String.Format("  {0,-30}:  {1}", "Hostname", strHostName));
+                LogToFile.Write(String.Format("  {0,-30}:  {1}", "Domain Name", dnsDomain));
+                LogToFile.Write(String.Format("  {0,-30}:  {1}", "Username", WindowsIdentity.GetCurrent().Name));
+                LogToFile.Write(String.Format("  {0,-30}:  {1}", "ProductName", ProductName));
+                LogToFile.Write(String.Format("  {0,-30}:  {1}", "EditionID", EditionID));
+                LogToFile.Write(String.Format("  {0,-30}:  {1}", "ReleaseId", ReleaseId));
+                LogToFile.Write(String.Format("  {0,-30}:  {1}", "BuildBranch", BuildBranch));
+                LogToFile.Write(String.Format("  {0,-30}:  {1}", "CurrentMajorVersionNumber", CurrentMajorVersionNumber));
+                LogToFile.Write(String.Format("  {0,-30}:  {1}", "CurrentVersion", CurrentVersion));
+                LogToFile.Write(String.Format("  {0,-30}:  {1}", "Architecture", arch));
+                LogToFile.Write(String.Format("  {0,-30}:  {1}", "ProcessorCount", ProcessorCount));
+                LogToFile.Write(String.Format("  {0,-30}:  {1}", "IsVirtualMachine", isVM));
+                LogToFile.Write(String.Format("  {0,-30}:  {1}", "BootTime (approx)", BootTime));
+                LogToFile.Write(String.Format("  {0,-30}:  {1}", "HighIntegrity", isHighIntegrity));
+                LogToFile.Write(String.Format("  {0,-30}:  {1}", "IsLocalAdmin", isLocalAdmin));
+            }
             if (!isHighIntegrity && isLocalAdmin)
             {
                 Console.WriteLine("    [*] In medium integrity but user is a local administrator- UAC can be bypassed.");
+                if (LogToFile.enableLogging) { LogToFile.Write("    [*] In medium integrity but user is a local administrator- UAC can be bypassed."); }
             }
         }
 
@@ -1758,6 +1890,7 @@ namespace Seatbelt
             int lastDays = 15;
 
             Console.WriteLine("\r\n\r\n=== Reboot Schedule (event ID 12/13 from last {0} days) ===\r\n", lastDays);
+            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\r\n\r\n=== Reboot Schedule (event ID 12/13 from last {0} days) ===\r\n", lastDays)); }
 
             SortedDictionary<System.DateTime, string> events = new SortedDictionary<System.DateTime, string>();
 
@@ -1784,6 +1917,7 @@ namespace Seatbelt
             catch (Exception ex)
             {
                 Console.WriteLine("  [X] Exception: {0}", ex.Message);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [X] Exception: {0}", ex.Message)); }
             }
 
             // eventID 13 == shutdown
@@ -1806,14 +1940,17 @@ namespace Seatbelt
             catch (Exception ex)
             {
                 Console.WriteLine("  [X] Exception: {0}", ex.Message);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [X] Exception: {0}", ex.Message)); }
             }
 
             foreach (var kvp in events)
             {
                 Console.WriteLine(String.Format("  {0,-23} :  {1}", kvp.Key, kvp.Value));
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,-23} :  {1}", kvp.Key, kvp.Value)); }
                 if (kvp.Value == "shutdown")
                 {
                     Console.WriteLine();
+                    if (LogToFile.enableLogging) { LogToFile.Write(""); }
                 }
             }
         }
@@ -1826,8 +1963,9 @@ namespace Seatbelt
             try
             {
                 Console.WriteLine("\r\n\r\n=== Current Privileges ===\r\n");
+                if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Current Privileges ===\r\n"); }
 
-                int TokenInfLength = 0;
+                    int TokenInfLength = 0;
                 IntPtr ThisHandle = WindowsIdentity.GetCurrent().Token;
                 GetTokenInformation(ThisHandle, TOKEN_INFORMATION_CLASS.TokenPrivileges, IntPtr.Zero, TokenInfLength, out TokenInfLength);
                 IntPtr TokenInformation = Marshal.AllocHGlobal(TokenInfLength);
@@ -1846,7 +1984,8 @@ namespace Seatbelt
                         if (LookupPrivilegeName(null, LuidPointer, StrBuilder, ref LuidNameLen))
                         {
                             Console.WriteLine(String.Format("  {0,43}:  {1}", StrBuilder.ToString(), (LuidAttributes)laa.Attributes));
-                        }
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,43}:  {1}", StrBuilder.ToString(), (LuidAttributes)laa.Attributes)); }
+                            }
                         Marshal.FreeHGlobal(LuidPointer);
                     }
                 }
@@ -1854,7 +1993,8 @@ namespace Seatbelt
             catch (Exception ex)
             {
                 Console.WriteLine("  [X] Exception: {0}", ex.Message);
-            }
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [X] Exception: {0}", ex.Message)); }
+                }
         }
 
         public static void ListUserEnvVariables()
@@ -1863,30 +2003,36 @@ namespace Seatbelt
             {
                 // dumps out current user environment variables
                 Console.WriteLine("\r\n\r\n=== User Environment Variables ===\r\n");
-                foreach (System.Collections.DictionaryEntry env in Environment.GetEnvironmentVariables())
+                if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== User Environment Variables ===\r\n"); }
+                    foreach (System.Collections.DictionaryEntry env in Environment.GetEnvironmentVariables())
                 {
                     string name = (string)env.Key;
                     string value = (string)env.Value;
                     Console.WriteLine("  {0,-35} : {1}", name, value);
-                }
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,-35} : {1}", name, value)); }
+                    }
             }
             catch (Exception ex)
             {
                 Console.WriteLine("  [X] Exception: {0}", ex.Message);
-            }
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [X] Exception: {0}", ex.Message)); }
+                }
         }
 
         public static void ListSystemEnvVariables()
         {
             // dumps out current system environment variables
             Console.WriteLine("\r\n\r\n=== System Environment Variables ===\r\n");
+            if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== System Environment Variables ===\r\n"); }
+
             Dictionary<string, object> settings = GetRegValues("HKLM", "SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment");
             if ((settings != null) && (settings.Count != 0))
             {
                 foreach (KeyValuePair<string, object> kvp in settings)
                 {
                     Console.WriteLine("  {0,-35} : {1}", kvp.Key, kvp.Value);
-                }
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,-35} : {1}", kvp.Key, kvp.Value)); }
+                    }
             }
         }
 
@@ -1898,11 +2044,13 @@ namespace Seatbelt
             if (FilterResults.filter)
             {
                 Console.WriteLine("\r\n\r\n=== Non Microsoft Services (via WMI) ===\r\n");
-            }
+                if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Non Microsoft Services (via WMI) ===\r\n"); }
+                }
             else
             {
                 Console.WriteLine("\r\n\r\n=== All Services (via WMI) ===\r\n");
-            }
+                if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== All Services (via WMI) ===\r\n"); }
+                }
 
             try
             {
@@ -1950,6 +2098,17 @@ namespace Seatbelt
                             Console.WriteLine("  StartMode        : {0}", result["StartMode"]);
                             Console.WriteLine("  PathName         : {0}", result["PathName"]);
                             Console.WriteLine("  IsDotNet         : {0}\r\n", isDotNet);
+                            if (LogToFile.enableLogging)
+                            {
+                                LogToFile.Write(String.Format("  Name             : {0}", result["Name"]));
+                                LogToFile.Write(String.Format("  DisplayName      : {0}", result["DisplayName"]));
+                                LogToFile.Write(String.Format("  Company Name     : {0}", companyName));
+                                LogToFile.Write(String.Format("  Description      : {0}", result["Description"]));
+                                LogToFile.Write(String.Format("  State            : {0}", result["State"]));
+                                LogToFile.Write(String.Format("  StartMode        : {0}", result["StartMode"]));
+                                LogToFile.Write(String.Format("  PathName         : {0}", result["PathName"]));
+                                LogToFile.Write(String.Format("  IsDotNet         : {0}\r\n", isDotNet));
+                            }
                         }
                     }
                 }
@@ -1957,6 +2116,7 @@ namespace Seatbelt
             catch (Exception ex)
             {
                 Console.WriteLine("  [X] Exception: {0}", ex.Message);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [X] Exception: {0}", ex.Message)); }
             }
         }
 
@@ -1966,22 +2126,26 @@ namespace Seatbelt
             try
             {
                 Console.WriteLine("\r\n\r\n=== User Folders ===\r\n");
+                if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== User Folders ===\r\n"); }
                 string userPath = String.Format("{0}\\Users\\", Environment.GetEnvironmentVariable("SystemDrive"));
 
                 string[] dirs = Directory.GetDirectories(userPath);
                 Console.WriteLine("  {0,-35}   {1}", "Folder", "Last Modified Time");
-                foreach (string dir in dirs)
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,-35}   {1}", "Folder", "Last Modified Time")); }
+                    foreach (string dir in dirs)
                 {
                     if (!(dir.EndsWith("Public") || dir.EndsWith("Default") || dir.EndsWith("Default User") || dir.EndsWith("All Users")))
                     {
                         DateTime dt = Directory.GetLastWriteTime(dir);
                         Console.WriteLine("  {0,-35} : {1}", dir, dt);
-                    }
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,-35} : {1}", dir, dt)); }
+                        }
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine("  [X] Exception: {0}", ex.Message);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [X] Exception: {0}", ex.Message)); }
             }
         }
 
@@ -1989,99 +2153,123 @@ namespace Seatbelt
         {
             // dump out various UAC system policies
             Console.WriteLine("\r\n\r\n=== UAC System Policies ===\r\n");
+            if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== UAC System Policies ===\r\n"); }
 
-            string ConsentPromptBehaviorAdmin = GetRegValue("HKLM", "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System", "ConsentPromptBehaviorAdmin");
+                string ConsentPromptBehaviorAdmin = GetRegValue("HKLM", "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System", "ConsentPromptBehaviorAdmin");
             switch (ConsentPromptBehaviorAdmin)
             {
                 case "0":
                     Console.WriteLine("  {0,-30} : {1} - No prompting", "ConsentPromptBehaviorAdmin", ConsentPromptBehaviorAdmin);
-                    break;
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,-30} : {1} - No prompting", "ConsentPromptBehaviorAdmin", ConsentPromptBehaviorAdmin)); }
+                        break;
                 case "1":
                     Console.WriteLine("  {0,-30} : {1} - PromptOnSecureDesktop", "ConsentPromptBehaviorAdmin", ConsentPromptBehaviorAdmin);
-                    break;
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,-30} : {1} - PromptOnSecureDesktop", "ConsentPromptBehaviorAdmin", ConsentPromptBehaviorAdmin)); }
+                        break;
                 case "2":
                     Console.WriteLine("  {0,-30} : {1} - PromptPermitDenyOnSecureDesktop", "ConsentPromptBehaviorAdmin", ConsentPromptBehaviorAdmin);
-                    break;
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,-30} : {1} - PromptPermitDenyOnSecureDesktop", "ConsentPromptBehaviorAdmin", ConsentPromptBehaviorAdmin)); }
+                        break;
                 case "3":
                     Console.WriteLine("  {0,-30} : {1} - PromptForCredsNotOnSecureDesktop", "ConsentPromptBehaviorAdmin", ConsentPromptBehaviorAdmin);
-                    break;
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,-30} : {1} - PromptForCredsNotOnSecureDesktop", "ConsentPromptBehaviorAdmin", ConsentPromptBehaviorAdmin)); }
+                        break;
                 case "4":
                     Console.WriteLine("  {0,-30} : {1} - PromptForPermitDenyNotOnSecureDesktop", "ConsentPromptBehaviorAdmin", ConsentPromptBehaviorAdmin);
-                    break;
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,-30} : {1} - PromptForPermitDenyNotOnSecureDesktop", "ConsentPromptBehaviorAdmin", ConsentPromptBehaviorAdmin)); }
+                        break;
                 case "5":
                     Console.WriteLine("  {0,-30} : {1} - PromptForNonWindowsBinaries", "ConsentPromptBehaviorAdmin", ConsentPromptBehaviorAdmin);
-                    break;
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,-30} : {1} - PromptForNonWindowsBinaries", "ConsentPromptBehaviorAdmin", ConsentPromptBehaviorAdmin)); }
+                        break;
                 default:
                     Console.WriteLine("  {0,-30} : PromptForNonWindowsBinaries", "ConsentPromptBehaviorAdmin");
-                    break;
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,-30} : PromptForNonWindowsBinaries", "ConsentPromptBehaviorAdmin")); }
+                        break;
             }
 
             string EnableLUA = GetRegValue("HKLM", "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System", "EnableLUA");
             Console.WriteLine("  {0,-30} : {1}", "EnableLUA", EnableLUA);
-            if ((EnableLUA == "") || (EnableLUA == "0"))
+            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,-30} : {1}", "EnableLUA", EnableLUA)); }
+                if ((EnableLUA == "") || (EnableLUA == "0"))
             {
                 Console.WriteLine("    [*] EnableLUA != 1, UAC policies disabled.\r\n    [*] Any local account can be used for lateral movement.");
-            }
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    [*] EnableLUA != 1, UAC policies disabled.\r\n    [*] Any local account can be used for lateral movement.")); }
+                }
 
             string LocalAccountTokenFilterPolicy = GetRegValue("HKLM", "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System", "LocalAccountTokenFilterPolicy");
             Console.WriteLine("  {0,-30} : {1}", "LocalAccountTokenFilterPolicy", LocalAccountTokenFilterPolicy);
-            if ((EnableLUA == "1") && (LocalAccountTokenFilterPolicy == "1"))
+            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,-30} : {1}", "LocalAccountTokenFilterPolicy", LocalAccountTokenFilterPolicy)); }
+                if ((EnableLUA == "1") && (LocalAccountTokenFilterPolicy == "1"))
             {
                 Console.WriteLine("    [*] LocalAccountTokenFilterPolicy set to 1.\r\n    [*] Any local account can be used for lateral movement.");
-            }
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    [*] LocalAccountTokenFilterPolicy set to 1.\r\n    [*] Any local account can be used for lateral movement.")); }
+                }
 
             string FilterAdministratorToken = GetRegValue("HKLM", "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System", "FilterAdministratorToken");
             Console.WriteLine("  {0,-30} : {1}", "FilterAdministratorToken", FilterAdministratorToken);
+            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,-30} : {1}", "FilterAdministratorToken", FilterAdministratorToken)); }
 
-            if ((EnableLUA == "1") && (LocalAccountTokenFilterPolicy != "1") && (FilterAdministratorToken != "1"))
+                if ((EnableLUA == "1") && (LocalAccountTokenFilterPolicy != "1") && (FilterAdministratorToken != "1"))
             {
                 Console.WriteLine("    [*] LocalAccountTokenFilterPolicy set to 0 and FilterAdministratorToken != 1.\r\n    [*] Only the RID-500 local admin account can be used for lateral movement.");
-            }
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    [*] LocalAccountTokenFilterPolicy set to 0 and FilterAdministratorToken != 1.\r\n    [*] Only the RID-500 local admin account can be used for lateral movement.")); }
+                }
 
             if ((EnableLUA == "1") && (LocalAccountTokenFilterPolicy != "1") && (FilterAdministratorToken == "1"))
             {
                 Console.WriteLine("    [*] LocalAccountTokenFilterPolicy set to 0 and FilterAdministratorToken == 1.\r\n    [*] No local accounts can be used for lateral movement.");
-            }
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    [*] LocalAccountTokenFilterPolicy set to 0 and FilterAdministratorToken == 1.\r\n    [*] No local accounts can be used for lateral movement.")); }
+                }
         }
 
         public static void ListPowerShellSettings()
         {
             Console.WriteLine("\r\n\r\n=== PowerShell Settings ===\r\n");
+            if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== PowerShell Settings ===\r\n"); }
 
-            string PowerShellVersion2 = GetRegValue("HKLM", "SOFTWARE\\Microsoft\\PowerShell\\1\\PowerShellEngine", "PowerShellVersion");
+                string PowerShellVersion2 = GetRegValue("HKLM", "SOFTWARE\\Microsoft\\PowerShell\\1\\PowerShellEngine", "PowerShellVersion");
             Console.WriteLine("  {0,-30} : {1}", "PowerShell v2 Version", PowerShellVersion2);
+            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,-30} : {1}", "PowerShell v2 Version", PowerShellVersion2)); }
 
-            string PowerShellVersion5 = GetRegValue("HKLM", "SOFTWARE\\Microsoft\\PowerShell\\3\\PowerShellEngine", "PowerShellVersion");
+                string PowerShellVersion5 = GetRegValue("HKLM", "SOFTWARE\\Microsoft\\PowerShell\\3\\PowerShellEngine", "PowerShellVersion");
             Console.WriteLine("  {0,-30} : {1}", "PowerShell v5 Version", PowerShellVersion5);
+            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,-30} : {1}", "PowerShell v5 Version", PowerShellVersion5)); }
 
-            Dictionary<string, object> transcriptionSettings = GetRegValues("HKLM", "SOFTWARE\\Policies\\Microsoft\\Windows\\PowerShell\\Transcription");
+                Dictionary<string, object> transcriptionSettings = GetRegValues("HKLM", "SOFTWARE\\Policies\\Microsoft\\Windows\\PowerShell\\Transcription");
             Console.WriteLine("\r\n  Transcription Settings:\r\n");
-            if ((transcriptionSettings != null) && (transcriptionSettings.Count != 0))
+            if (LogToFile.enableLogging) { LogToFile.Write("\r\n  Transcription Settings:\r\n"); }
+                if ((transcriptionSettings != null) && (transcriptionSettings.Count != 0))
             {
                 foreach (KeyValuePair<string, object> kvp in transcriptionSettings)
                 {
                     Console.WriteLine("  {0,30} : {1}\r\n", kvp.Key, kvp.Value);
-                }
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,30} : {1}\r\n", kvp.Key, kvp.Value)); }
+                    }
             }
 
             Dictionary<string, object> moduleLoggingSettings = GetRegValues("HKLM", "SOFTWARE\\Policies\\Microsoft\\Windows\\PowerShell\\ModuleLogging");
             Console.WriteLine("  Module Logging Settings:\r\n");
-            if ((moduleLoggingSettings != null) && (moduleLoggingSettings.Count != 0))
+            if (LogToFile.enableLogging) { LogToFile.Write("  Module Logging Settings:\r\n"); }
+                if ((moduleLoggingSettings != null) && (moduleLoggingSettings.Count != 0))
             {
                 foreach (KeyValuePair<string, object> kvp in moduleLoggingSettings)
                 {
                     Console.WriteLine("  {0,30} : {1}\r\n", kvp.Key, kvp.Value);
-                }
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,30} : {1}\r\n", kvp.Key, kvp.Value)); }
+                    }
             }
 
             Dictionary<string, object> scriptBlockSettings = GetRegValues("HKLM", "SOFTWARE\\Policies\\Microsoft\\Windows\\PowerShell\\ScriptBlockLogging");
             Console.WriteLine("  Scriptblock Logging Settings:\r\n");
-            if ((scriptBlockSettings != null) && (scriptBlockSettings.Count != 0))
+            if (LogToFile.enableLogging) { LogToFile.Write("  Scriptblock Logging Settings:\r\n"); }
+                if ((scriptBlockSettings != null) && (scriptBlockSettings.Count != 0))
             {
                 foreach (KeyValuePair<string, object> kvp in scriptBlockSettings)
                 {
                     Console.WriteLine("  {0,30} : {1}\r\n", kvp.Key, kvp.Value);
-                }
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,30} : {1}\r\n", kvp.Key, kvp.Value)); }
+                    }
             }
         }
 
@@ -2091,28 +2279,33 @@ namespace Seatbelt
 
             Dictionary<string, object> proxySettings = GetRegValues("HKCU", "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings");
             Console.WriteLine("\r\n\r\n=== HKCU Internet Settings ===\r\n");
-            if ((proxySettings != null) && (proxySettings.Count != 0))
+            if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== HKCU Internet Settings ===\r\n"); }
+                if ((proxySettings != null) && (proxySettings.Count != 0))
             {
                 foreach (KeyValuePair<string, object> kvp in proxySettings)
                 {
                     Console.WriteLine("  {0,30} : {1}", kvp.Key, kvp.Value);
-                }
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,30} : {1}", kvp.Key, kvp.Value)); }
+                    }
             }
 
             Dictionary<string, object> proxySettings2 = GetRegValues("HKLM", "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings");
             Console.WriteLine("\r\n\r\n=== HKLM Internet Settings ===\r\n");
-            if ((proxySettings2 != null) && (proxySettings2.Count != 0))
+            if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== HKLM Internet Settings ===\r\n"); }
+                if ((proxySettings2 != null) && (proxySettings2.Count != 0))
             {
                 foreach (KeyValuePair<string, object> kvp in proxySettings2)
                 {
                     Console.WriteLine("  {0,30} : {1}", kvp.Key, kvp.Value);
-                }
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,30} : {1}", kvp.Key, kvp.Value)); }
+                    }
             }
         }
 
         public static void ListLSASettings()
         {
             Console.WriteLine("\r\n\r\n=== LSA Settings ===\r\n");
+            if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== LSA Settings ===\r\n"); }
             Dictionary<string, object> settings = GetRegValues("HKLM", "SYSTEM\\CurrentControlSet\\Control\\Lsa");
             if ((settings != null) && (settings.Count != 0))
             {
@@ -2122,21 +2315,24 @@ namespace Seatbelt
                     {
                         string result = string.Join(",", (string[])kvp.Value);
                         Console.WriteLine("  {0,-30} : {1}", kvp.Key, result);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,-30} : {1}", kvp.Key, result)); }
 
-                        if (kvp.Key.ToString() == "Security Packages")
+                            if (kvp.Key.ToString() == "Security Packages")
                         {
                             Regex regex = new Regex(@".*wdigest.*");
                             Match m = regex.Match(result);
                             if (m.Success)
                             {
                                 Console.WriteLine("    [*] Wdigest is enabled- plaintext password extraction is possible!");
-                            }
+                                if (LogToFile.enableLogging) { LogToFile.Write("    [*] Wdigest is enabled- plaintext password extraction is possible!"); }
+                                }
                         }
                     }
                     else
                     {
                         Console.WriteLine("  {0,-30} : {1}", kvp.Key, kvp.Value);
-                    }
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,-30} : {1}", kvp.Key, kvp.Value)); }
+                        }
                 }
             }
         }
@@ -2160,8 +2356,9 @@ namespace Seatbelt
             // also Jared Atkinson's work at https://github.com/Invoke-IR/ACE/blob/master/ACE-Management/PS-ACE/Scripts/ACE_Get-KerberosTicketCache.ps1
 
             Console.WriteLine("\r\n\r\n=== Kerberos Tickets (All Users) ===\r\n");
+            if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Kerberos Tickets (All Users) ===\r\n"); }
 
-            IntPtr hLsa = LsaRegisterLogonProcessHelper();
+                IntPtr hLsa = LsaRegisterLogonProcessHelper();
             int totalTicketCount = 0;
 
             // if the original call fails then it is likely we don't have SeTcbPrivilege
@@ -2248,6 +2445,19 @@ namespace Seatbelt
                         Console.WriteLine("  LogonServer              : {0}", logonServer);
                         Console.WriteLine("  LogonServerDNSDomain     : {0}", dnsDomainName);
                         Console.WriteLine("  UserPrincipalName        : {0}\r\n", upn);
+                        if (LogToFile.enableLogging)
+                        {
+                            LogToFile.Write(String.Format("\r\n  UserName                 : {0}", username));
+                            LogToFile.Write(String.Format("  Domain                   : {0}", domain));
+                            LogToFile.Write(String.Format("  LogonId                  : {0}", data.LoginID.LowPart));
+                            LogToFile.Write(String.Format("  UserSID                  : {0}", sid.AccountDomainSid));
+                            LogToFile.Write(String.Format("  AuthenticationPackage    : {0}", authpackage));
+                            LogToFile.Write(String.Format("  LogonType                : {0}", logonType));
+                            LogToFile.Write(String.Format("  LogonType                : {0}", logonTime));
+                            LogToFile.Write(String.Format("  LogonServer              : {0}", logonServer));
+                            LogToFile.Write(String.Format("  LogonServerDNSDomain     : {0}", dnsDomainName));
+                            LogToFile.Write(String.Format("  UserPrincipalName        : {0}\r\n", upn));
+                        }
 
                         if (ticketPointer != IntPtr.Zero)
                         {
@@ -2258,6 +2468,7 @@ namespace Seatbelt
                             if (count2 != 0)
                             {
                                 Console.WriteLine("    [*] Enumerated {0} ticket(s):\r\n", count2);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    [*] Enumerated {0} ticket(s):\r\n", count2)); }
                                 totalTicketCount += count2;
                                 // get the size of the structures we're iterating over
                                 Int32 dataSize = Marshal.SizeOf(typeof(KERB_TICKET_CACHE_INFO));
@@ -2286,6 +2497,16 @@ namespace Seatbelt
                                     Console.WriteLine("    RenewTime          :  {0}", renewTime);
                                     Console.WriteLine("    EncryptionType     :  {0}", encryptionType);
                                     Console.WriteLine("    TicketFlags        :  {0}\r\n", ticketFlags);
+                                    if (LogToFile.enableLogging)
+                                    {
+                                        LogToFile.Write(String.Format("    ServerName         :  {0}", serverName));
+                                        LogToFile.Write(String.Format("    RealmName          :  {0}", realmName));
+                                        LogToFile.Write(String.Format("    StartTime          :  {0}", startTime));
+                                        LogToFile.Write(String.Format("    EndTime            :  {0}", endTime));
+                                        LogToFile.Write(String.Format("    RenewTime          :  {0}", renewTime));
+                                        LogToFile.Write(String.Format("    EncryptionType     :  {0}", encryptionType));
+                                        LogToFile.Write(String.Format("    TicketFlags        :  {0}\r\n", ticketFlags));
+                                    }
                                 }
                             }
                         }
@@ -2300,11 +2521,13 @@ namespace Seatbelt
                 LsaDeregisterLogonProcess(hLsa);
 
                 Console.WriteLine("\r\n\r\n  [*] Enumerated {0} total tickets\r\n", totalTicketCount);
-            }
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\r\n\r\n  [*] Enumerated {0} total tickets\r\n", totalTicketCount)); }
+                }
             catch (Exception ex)
             {
                 Console.WriteLine("  [X] Exception: {0}", ex);
-            }
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [X] Exception: {0}", ex)); }
+                }
         }
         public static void ListKerberosTicketsCurrentUser()
         {
@@ -2314,8 +2537,9 @@ namespace Seatbelt
             // also Jared Atkinson's work at https://github.com/Invoke-IR/ACE/blob/master/ACE-Management/PS-ACE/Scripts/ACE_Get-KerberosTicketCache.ps1
 
             Console.WriteLine("\r\n\r\n=== Kerberos Tickets (Current User) ===\r\n");
+            if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Kerberos Tickets (Current User) ===\r\n"); }
 
-            try
+                try
             {
                 string name = "kerberos";
                 LSA_STRING_IN LSAString;
@@ -2354,9 +2578,10 @@ namespace Seatbelt
                 tickets = (KERB_QUERY_TKT_CACHE_RESPONSE)Marshal.PtrToStructure((System.IntPtr)ticketPointer, typeof(KERB_QUERY_TKT_CACHE_RESPONSE));
                 int count = tickets.CountOfTickets;
                 Console.WriteLine("  [*] Returned {0} tickets\r\n", count);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [*] Returned {0} tickets\r\n", count)); }
 
-                // get the size of the structures we're iterating over
-                Int32 dataSize = Marshal.SizeOf(typeof(KERB_TICKET_CACHE_INFO));
+                    // get the size of the structures we're iterating over
+                    Int32 dataSize = Marshal.SizeOf(typeof(KERB_TICKET_CACHE_INFO));
 
                 for (int i = 0; i < count; i++)
                 {
@@ -2382,6 +2607,16 @@ namespace Seatbelt
                     Console.WriteLine("  RenewTime          :  {0}", renewTime);
                     Console.WriteLine("  EncryptionType     :  {0}", encryptionType);
                     Console.WriteLine("  TicketFlags        :  {0}\r\n", ticketFlags);
+                    if (LogToFile.enableLogging)
+                    {
+                        LogToFile.Write(String.Format("  ServerName         :  {0}", serverName));
+                        LogToFile.Write(String.Format("  RealmName          :  {0}", realmName));
+                        LogToFile.Write(String.Format("  StartTime          :  {0}", startTime));
+                        LogToFile.Write(String.Format("  EndTime            :  {0}", endTime));
+                        LogToFile.Write(String.Format("  RenewTime          :  {0}", renewTime));
+                        LogToFile.Write(String.Format("  EncryptionType     :  {0}", encryptionType));
+                        LogToFile.Write(String.Format("  TicketFlags        :  {0}\r\n", ticketFlags));
+                    }
                 }
 
                 // disconnect from LSA
@@ -2390,7 +2625,8 @@ namespace Seatbelt
             catch (Exception ex)
             {
                 Console.WriteLine("  [X] Exception: {0}", ex.Message);
-            }
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [X] Exception: {0}", ex.Message)); }
+                }
         }
 
         public static void ListKerberosTGTData()
@@ -2412,8 +2648,9 @@ namespace Seatbelt
             // also Jared Atkinson's work at https://github.com/Invoke-IR/ACE/blob/master/ACE-Management/PS-ACE/Scripts/ACE_Get-KerberosTicketCache.ps1
 
             Console.WriteLine("\r\n\r\n=== Kerberos TGT Data (All Users) ===\r\n");
+            if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Kerberos TGT Data (All Users) ===\r\n"); }
 
-            IntPtr hLsa = LsaRegisterLogonProcessHelper();
+                IntPtr hLsa = LsaRegisterLogonProcessHelper();
             int totalTicketCount = 0;
 
             // if the original call fails then it is likely we don't have SeTcbPrivilege
@@ -2501,9 +2738,22 @@ namespace Seatbelt
                             Console.WriteLine("  LogonServer              : {0}", logonServer);
                             Console.WriteLine("  LogonServerDNSDomain     : {0}", dnsDomainName);
                             Console.WriteLine("  UserPrincipalName        : {0}", upn);
+                            if (LogToFile.enableLogging)
+                            {
+                                LogToFile.Write(String.Format("\r\n  UserName                 : {0}", username));
+                                LogToFile.Write(String.Format("  Domain                   : {0}", domain));
+                                LogToFile.Write(String.Format("  LogonId                  : {0}", data.LoginID.LowPart));
+                                LogToFile.Write(String.Format("  UserSID                  : {0}", sid.AccountDomainSid));
+                                LogToFile.Write(String.Format("  AuthenticationPackage    : {0}", authpackage));
+                                LogToFile.Write(String.Format("  LogonType                : {0}", logonType));
+                                LogToFile.Write(String.Format("  LogonType                : {0}", logonTime));
+                                LogToFile.Write(String.Format("  LogonServer              : {0}", logonServer));
+                                LogToFile.Write(String.Format("  LogonServerDNSDomain     : {0}", dnsDomainName));
+                                LogToFile.Write(String.Format("  UserPrincipalName        : {0}", upn));
+                            }
 
-                            // parse the returned pointer into our initial KERB_RETRIEVE_TKT_RESPONSE structure
-                            response = (KERB_RETRIEVE_TKT_RESPONSE)Marshal.PtrToStructure((System.IntPtr)responsePointer, typeof(KERB_RETRIEVE_TKT_RESPONSE));
+                                // parse the returned pointer into our initial KERB_RETRIEVE_TKT_RESPONSE structure
+                                response = (KERB_RETRIEVE_TKT_RESPONSE)Marshal.PtrToStructure((System.IntPtr)responsePointer, typeof(KERB_RETRIEVE_TKT_RESPONSE));
 
                             KERB_EXTERNAL_NAME serviceNameStruct = (KERB_EXTERNAL_NAME)Marshal.PtrToStructure(response.Ticket.ServiceName, typeof(KERB_EXTERNAL_NAME));
                             string serviceName = Marshal.PtrToStringUni(serviceNameStruct.Names.Buffer, serviceNameStruct.Names.Length / 2).Trim();
@@ -2559,12 +2809,34 @@ namespace Seatbelt
                             Console.WriteLine("  TimeSkew                 : {0}", timeSkew);
                             Console.WriteLine("  EncodedTicketSize        : {0}", encodedTicketSize);
                             Console.WriteLine("  Base64EncodedTicket      :\r\n");
-                            // display the TGT, columns of 100 chararacters
-                            foreach (string line in Split(base64TGT, 100))
+                            if (LogToFile.enableLogging)
+                            {
+                                LogToFile.Write(String.Format("  ServiceName              : {0}", serviceName));
+                                LogToFile.Write(String.Format("  TargetName               : {0}", targetName));
+                                LogToFile.Write(String.Format("  ClientName               : {0}", clientName));
+                                LogToFile.Write(String.Format("  DomainName               : {0}", domainName));
+                                LogToFile.Write(String.Format("  TargetDomainName         : {0}", targetDomainName));
+                                LogToFile.Write(String.Format("  AltTargetDomainName      : {0}", altTargetDomainName));
+                                LogToFile.Write(String.Format("  SessionKeyType           : {0}", sessionKeyType));
+                                LogToFile.Write(String.Format("  Base64SessionKey         : {0}", base64SessionKey));
+                                LogToFile.Write(String.Format("  KeyExpirationTime        : {0}", keyExpirationTime));
+                                LogToFile.Write(String.Format("  TicketFlags              : {0}", ticketFlags));
+                                LogToFile.Write(String.Format("  StartTime                : {0}", startTime));
+                                LogToFile.Write(String.Format("  EndTime                  : {0}", endTime));
+                                LogToFile.Write(String.Format("  RenewUntil               : {0}", renewUntil));
+                                LogToFile.Write(String.Format("  TimeSkew                 : {0}", timeSkew));
+                                LogToFile.Write(String.Format("  EncodedTicketSize        : {0}", encodedTicketSize));
+                                LogToFile.Write(String.Format("  Base64EncodedTicket      :\r\n"));
+                            }
+
+                                // display the TGT, columns of 100 chararacters
+                                foreach (string line in Split(base64TGT, 100))
                             {
                                 Console.WriteLine("    {0}", line);
-                            }
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    {0}", line)); }
+                                }
                             Console.WriteLine();
+                            if (LogToFile.enableLogging) { LogToFile.Write(""); }
                             totalTicketCount++;
                         }
                     }
@@ -2579,11 +2851,13 @@ namespace Seatbelt
                 LsaDeregisterLogonProcess(hLsa);
 
                 Console.WriteLine("\r\n\r\n  [*] Extracted {0} total tickets\r\n", totalTicketCount);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\r\n\r\n  [*] Extracted {0} total tickets\r\n", totalTicketCount)); }
             }
             catch (Exception ex)
             {
                 Console.WriteLine("  [X] Exception: {0}", ex);
-            }
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [X] Exception: {0}", ex)); }
+                }
         }
         public static void ListKerberosTGTDataCurrentUser()
         {
@@ -2593,8 +2867,9 @@ namespace Seatbelt
             // also Jared Atkinson's work at https://github.com/Invoke-IR/ACE/blob/master/ACE-Management/PS-ACE/Scripts/ACE_Get-KerberosTicketCache.ps1
 
             Console.WriteLine("\r\n\r\n=== Kerberos TGT Data (Current User) ===\r\n");
+            if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Kerberos TGT Data (Current User) ===\r\n"); }
 
-            try
+                try
             {
                 string name = "kerberos";
                 LSA_STRING_IN LSAString;
@@ -2685,12 +2960,34 @@ namespace Seatbelt
                 Console.WriteLine("  TimeSkew                 : {0}", timeSkew);
                 Console.WriteLine("  EncodedTicketSize        : {0}", encodedTicketSize);
                 Console.WriteLine("  Base64EncodedTicket      :\r\n");
-                // display the TGT, columns of 100 chararacters
-                foreach (string line in Split(base64TGT, 100))
+                if (LogToFile.enableLogging)
+                {
+                    LogToFile.Write(String.Format("  ServiceName              : {0}", serviceName));
+                    LogToFile.Write(String.Format("  TargetName               : {0}", targetName));
+                    LogToFile.Write(String.Format("  ClientName               : {0}", clientName));
+                    LogToFile.Write(String.Format("  DomainName               : {0}", domainName));
+                    LogToFile.Write(String.Format("  TargetDomainName         : {0}", targetDomainName));
+                    LogToFile.Write(String.Format("  AltTargetDomainName      : {0}", altTargetDomainName));
+                    LogToFile.Write(String.Format("  SessionKeyType           : {0}", sessionKeyType));
+                    LogToFile.Write(String.Format("  Base64SessionKey         : {0}", base64SessionKey));
+                    LogToFile.Write(String.Format("  KeyExpirationTime        : {0}", keyExpirationTime));
+                    LogToFile.Write(String.Format("  TicketFlags              : {0}", ticketFlags));
+                    LogToFile.Write(String.Format("  StartTime                : {0}", startTime));
+                    LogToFile.Write(String.Format("  EndTime                  : {0}", endTime));
+                    LogToFile.Write(String.Format("  RenewUntil               : {0}", renewUntil));
+                    LogToFile.Write(String.Format("  TimeSkew                 : {0}", timeSkew));
+                    LogToFile.Write(String.Format("  EncodedTicketSize        : {0}", encodedTicketSize));
+                    LogToFile.Write(String.Format("  Base64EncodedTicket      :\r\n"));
+                }
+
+                    // display the TGT, columns of 100 chararacters
+                    foreach (string line in Split(base64TGT, 100))
                 {
                     Console.WriteLine("    {0}", line);
-                }
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    {0}", line)); }
+                    }
                 Console.WriteLine();
+                if (LogToFile.enableLogging) { LogToFile.Write(""); }
 
                 // disconnect from LSA
                 LsaDeregisterLogonProcess(lsaHandle);
@@ -2698,7 +2995,8 @@ namespace Seatbelt
             catch (Exception ex)
             {
                 Console.WriteLine("  [X] Exception: {0}", ex.Message);
-            }
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [X] Exception: {0}", ex.Message)); }
+                }
         }
 
         // https://github.com/pauldotknopf/WindowsSDK7-Samples/blob/master/security/authorization/klist/KList.c#L585
@@ -2924,8 +3222,9 @@ namespace Seatbelt
                 Regex logonIdRegex = new Regex(@"LogonId=""(\d+)""");
 
                 Console.WriteLine("\r\n\r\n=== Logon Sessions (via WMI) ===\r\n\r\n");
+                if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Logon Sessions (via WMI) ===\r\n\r\n"); }
 
-                Dictionary<string, string[]> logonMap = new Dictionary<string, string[]>();
+                    Dictionary<string, string[]> logonMap = new Dictionary<string, string[]>();
 
                 try
                 {
@@ -2966,12 +3265,22 @@ namespace Seatbelt
                         Console.WriteLine("  LogonType                : {0}", logonType);
                         Console.WriteLine("  AuthenticationPackage    : {0}", result2["AuthenticationPackage"].ToString());
                         Console.WriteLine("  StartTime                : {0}\r\n", startTime);
+                        if (LogToFile.enableLogging)
+                        {
+                            LogToFile.Write(String.Format("  UserName                 : {0}", userName));
+                            LogToFile.Write(String.Format("  Domain                   : {0}", domain));
+                            LogToFile.Write(String.Format("  LogonId                  : {0}", result2["LogonId"].ToString()));
+                            LogToFile.Write(String.Format("  LogonType                : {0}", logonType));
+                            LogToFile.Write(String.Format("  AuthenticationPackage    : {0}", result2["AuthenticationPackage"].ToString()));
+                            LogToFile.Write(String.Format("  StartTime                : {0}\r\n", startTime));
+                        }
                     }
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine("  [X] Exception: {0}", ex.Message);
-                }
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [X] Exception: {0}", ex.Message)); }
+                    }
             }
             else
             {
@@ -2979,6 +3288,7 @@ namespace Seatbelt
                 //      https://www.codeproject.com/Articles/18179/Using-the-Local-Security-Authority-to-Enumerate-Us
 
                 Console.WriteLine("\r\n\r\n=== Logon Sessions (via LSA) ===\r\n\r\n");
+                if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Logon Sessions (via LSA) ===\r\n\r\n"); }
 
                 try
                 {
@@ -3036,6 +3346,19 @@ namespace Seatbelt
                             Console.WriteLine("  LogonServer              : {0}", logonServer);
                             Console.WriteLine("  LogonServerDNSDomain     : {0}", dnsDomainName);
                             Console.WriteLine("  UserPrincipalName        : {0}\r\n", upn);
+                            if (LogToFile.enableLogging)
+                            {
+                                LogToFile.Write(String.Format("  UserName                 : {0}", username));
+                                LogToFile.Write(String.Format("  Domain                   : {0}", domain));
+                                LogToFile.Write(String.Format("  LogonId                  : {0}", data.LoginID.LowPart));
+                                LogToFile.Write(String.Format("  UserSID                  : {0}", sid.AccountDomainSid));
+                                LogToFile.Write(String.Format("  AuthenticationPackage    : {0}", authpackage));
+                                LogToFile.Write(String.Format("  LogonType                : {0}", logonType));
+                                LogToFile.Write(String.Format("  LogonType                : {0}", logonTime));
+                                LogToFile.Write(String.Format("  LogonServer              : {0}", logonServer));
+                                LogToFile.Write(String.Format("  LogonServerDNSDomain     : {0}", dnsDomainName));
+                                LogToFile.Write(String.Format("  UserPrincipalName        : {0}\r\n", upn));
+                            }
                         }
                         // move the pointer forward
                         luidPtr = (IntPtr)((long)luidPtr.ToInt64() + Marshal.SizeOf(typeof(LUID)));
@@ -3046,6 +3369,7 @@ namespace Seatbelt
                 catch (Exception ex)
                 {
                     Console.WriteLine("  [X] Exception: {0}", ex);
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [X] Exception: {0}", ex)); }
                 }
             }
         }
@@ -3053,7 +3377,8 @@ namespace Seatbelt
         public static void ListAuditSettings()
         {
             Console.WriteLine("\r\n\r\n=== Audit Settings ===\r\n");
-            Dictionary<string, object> settings = GetRegValues("HKLM", "Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\\Audit");
+            if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Audit Settings ===\r\n"); }
+                Dictionary<string, object> settings = GetRegValues("HKLM", "Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\\Audit");
             if ((settings != null) && (settings.Count != 0))
             {
                 foreach (KeyValuePair<string, object> kvp in settings)
@@ -3062,11 +3387,13 @@ namespace Seatbelt
                     {
                         string result = string.Join(",", (string[])kvp.Value);
                         Console.WriteLine("  {0,-30} : {1}", kvp.Key, result);
-                    }
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,-30} : {1}", kvp.Key, result)); }
+                        }
                     else
                     {
                         Console.WriteLine("  {0,-30} : {1}", kvp.Key, kvp.Value);
-                    }
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,-30} : {1}", kvp.Key, kvp.Value)); }
+                        }
                 }
             }
         }
@@ -3074,6 +3401,8 @@ namespace Seatbelt
         public static void ListWEFSettings()
         {
             Console.WriteLine("\r\n\r\n=== WEF Settings ===\r\n");
+            if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== WEF Settings ===\r\n"); }
+
             Dictionary<string, object> settings = GetRegValues("HKLM", "Software\\Policies\\Microsoft\\Windows\\EventLog\\EventForwarding\\SubscriptionManager");
             if ((settings != null) && (settings.Count != 0))
             {
@@ -3083,11 +3412,13 @@ namespace Seatbelt
                     {
                         string result = string.Join(",", (string[])kvp.Value);
                         Console.WriteLine("  {0,-30} : {1}", kvp.Key, result);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,-30} : {1}", kvp.Key, result)); }
                     }
                     else
                     {
                         Console.WriteLine("  {0,-30} : {1}", kvp.Key, kvp.Value);
-                    }
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,-30} : {1}", kvp.Key, kvp.Value)); }
+                        }
                 }
             }
         }
@@ -3095,28 +3426,35 @@ namespace Seatbelt
         public static void ListLapsSettings()
         {
             Console.WriteLine("\r\n\r\n=== LAPS Settings ===\r\n");
+            if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== LAPS Settings ===\r\n"); }
 
-            string AdmPwdEnabled = GetRegValue("HKLM", "Software\\Policies\\Microsoft Services\\AdmPwd", "AdmPwdEnabled");
+                string AdmPwdEnabled = GetRegValue("HKLM", "Software\\Policies\\Microsoft Services\\AdmPwd", "AdmPwdEnabled");
 
             if (AdmPwdEnabled != "")
             {
                 Console.WriteLine("  {0,-37} : {1}", "LAPS Enabled", AdmPwdEnabled);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,-37} : {1}", "LAPS Enabled", AdmPwdEnabled)); }
 
-                string LAPSAdminAccountName = GetRegValue("HKLM", "Software\\Policies\\Microsoft Services\\AdmPwd", "AdminAccountName");
+                    string LAPSAdminAccountName = GetRegValue("HKLM", "Software\\Policies\\Microsoft Services\\AdmPwd", "AdminAccountName");
                 Console.WriteLine("  {0,-37} : {1}", "LAPS Admin Account Name", LAPSAdminAccountName);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,-37} : {1}", "LAPS Admin Account Name", LAPSAdminAccountName)); }
 
-                string LAPSPasswordComplexity = GetRegValue("HKLM", "Software\\Policies\\Microsoft Services\\AdmPwd", "PasswordComplexity");
+                    string LAPSPasswordComplexity = GetRegValue("HKLM", "Software\\Policies\\Microsoft Services\\AdmPwd", "PasswordComplexity");
                 Console.WriteLine("  {0,-37} : {1}", "LAPS Password Complexity", LAPSPasswordComplexity);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,-37} : {1}", "LAPS Password Complexity", LAPSPasswordComplexity)); }
 
-                string LAPSPasswordLength = GetRegValue("HKLM", "Software\\Policies\\Microsoft Services\\AdmPwd", "PasswordLength");
+                    string LAPSPasswordLength = GetRegValue("HKLM", "Software\\Policies\\Microsoft Services\\AdmPwd", "PasswordLength");
                 Console.WriteLine("  {0,-37} : {1}", "LAPS Password Length", LAPSPasswordLength);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,-37} : {1}", "LAPS Password Length", LAPSPasswordLength)); }
 
-                string LASPwdExpirationProtectionEnabled = GetRegValue("HKLM", "Software\\Policies\\Microsoft Services\\AdmPwd", "PwdExpirationProtectionEnabled");
+                    string LASPwdExpirationProtectionEnabled = GetRegValue("HKLM", "Software\\Policies\\Microsoft Services\\AdmPwd", "PwdExpirationProtectionEnabled");
                 Console.WriteLine("  {0,-37} : {1}", "LAPS Expiration Protection Enabled", LASPwdExpirationProtectionEnabled);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,-37} : {1}", "LAPS Expiration Protection Enabled", LASPwdExpirationProtectionEnabled));}
             }
             else
             {
                 Console.WriteLine("  [*] LAPS not installed");
+                if (LogToFile.enableLogging) { LogToFile.Write("  [*] LAPS not installed");}
             }
         }
 
@@ -3127,9 +3465,10 @@ namespace Seatbelt
             try
             {
                 Console.WriteLine("\r\n\r\n=== Local Group Memberships ===\r\n");
+                if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Local Group Memberships ===\r\n"); }
 
                 // localization for @cnotin ;)
-                string[] groupsSIDs = {
+                    string[] groupsSIDs = {
                     "S-1-5-32-544", // Administrators
                     "S-1-5-32-555", // RDP
                     "S-1-5-32-562", // COM
@@ -3143,27 +3482,32 @@ namespace Seatbelt
                     {
                         // e.g. "S-1-5-32-580" for "Remote Management Users" can be missing on older versions of Windows
                         Console.WriteLine("  [X] Cannot find SID translation for '{0}'", sid);
-                        continue;
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [X] Cannot find SID translation for '{0}'", sid)); }
+                            continue;
                     }
 
                     string groupName = groupNameFull.Substring(groupNameFull.IndexOf('\\') + 1);
                     Console.WriteLine("  * {0} *\r\n", groupName);
-                    string[] members = GetLocalGroupMembers(groupName);
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  * {0} *\r\n", groupName)); }
+                        string[] members = GetLocalGroupMembers(groupName);
                     if (members != null)
                     {
                         foreach (string member in members)
                         {
                             Console.WriteLine("    {0}", member);
-                        }
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    {0}", member)); }
+                            }
                     }
 
                     Console.WriteLine("");
+                    if (LogToFile.enableLogging) { LogToFile.Write(""); }
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine("  [X] Exception: {0}", ex.Message);
-            }
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [X] Exception: {0}", ex.Message)); }
+                }
         }
 
         public static void ListMappedDrives()
@@ -3171,24 +3515,28 @@ namespace Seatbelt
             try
             {
                 Console.WriteLine("\r\n\r\n=== Drive Information (via .NET) ===\r\n");
+                if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Drive Information (via .NET) ===\r\n"); }
 
-                // grab all drive letters
-                DriveInfo[] driveInfos = DriveInfo.GetDrives();
+                    // grab all drive letters
+                    DriveInfo[] driveInfos = DriveInfo.GetDrives();
 
                 Console.WriteLine("  {0,-10}   {1}", "Drive", "Mapped Location");
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,-10}   {1}", "Drive", "Mapped Location")); }
 
-                foreach (DriveInfo driveInfo in driveInfos)
+                    foreach (DriveInfo driveInfo in driveInfos)
                 {
                     // try to resolve each drive to a UNC mapped location
                     string path = GetUNCPath(driveInfo.Name);
 
                     Console.WriteLine("  {0,-10} : {1}", driveInfo.Name, path);
-                }
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,-10} : {1}", driveInfo.Name, path)); }
+                    }
             }
             catch (Exception ex)
             {
                 Console.WriteLine("  [X] Exception: {0}", ex.Message);
-            }
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [X] Exception: {0}", ex.Message)); }
+                }
         }
 
         public static void ListWMIMappedDrives()
@@ -3199,8 +3547,9 @@ namespace Seatbelt
                 ManagementObjectCollection data = wmiData.Get();
 
                 Console.WriteLine("\r\n\r\n=== Mapped Drives (via WMI) ===\r\n");
+                if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Mapped Drives (via WMI) ===\r\n"); }
 
-                foreach (ManagementObject result in data)
+                    foreach (ManagementObject result in data)
                 {
                     Console.WriteLine("  LocalName        : {0}", result["LocalName"]);
                     Console.WriteLine("  RemoteName       : {0}", result["RemoteName"]);
@@ -3210,12 +3559,24 @@ namespace Seatbelt
                     Console.WriteLine("  Persistent       : {0}", result["Persistent"]);
                     Console.WriteLine("  UserName         : {0}", result["UserName"]);
                     Console.WriteLine("  Description      : {0}\r\n", result["Description"]);
+                    if (LogToFile.enableLogging)
+                    {
+                        LogToFile.Write(String.Format("  LocalName        : {0}", result["LocalName"]));
+                        LogToFile.Write(String.Format("  RemoteName       : {0}", result["RemoteName"]));
+                        LogToFile.Write(String.Format("  RemotePath       : {0}", result["RemotePath"]));
+                        LogToFile.Write(String.Format("  Status           : {0}", result["Status"]));
+                        LogToFile.Write(String.Format("  ConnectionState  : {0}", result["ConnectionState"]));
+                        LogToFile.Write(String.Format("  Persistent       : {0}", result["Persistent"]));
+                        LogToFile.Write(String.Format("  UserName         : {0}", result["UserName"]));
+                        LogToFile.Write(String.Format("  Description      : {0}\r\n", result["Description"]));
+                    }
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine("  [X] Exception: {0}", ex.Message);
-            }
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [X] Exception: {0}", ex.Message)); }
+                }
         }
 
         public static void ListNetworkShares()
@@ -3228,18 +3589,23 @@ namespace Seatbelt
                 ManagementObjectCollection data = wmiData.Get();
 
                 Console.WriteLine("\r\n\r\n=== Network Shares (via WMI) ===\r\n");
+                if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Network Shares (via WMI) ===\r\n"); }
 
-                foreach (ManagementObject result in data)
+                    foreach (ManagementObject result in data)
                 {
                     Console.WriteLine("  Name             : {0}", result["Name"]);
-                    Console.WriteLine("  Path             : {0}", result["Path"]);
-                    Console.WriteLine("  Description      : {0}\r\n", result["Description"]);
-                }
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  Name             : {0}", result["Name"])); }
+                        Console.WriteLine("  Path             : {0}", result["Path"]);
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  Path             : {0}", result["Path"])); }
+                        Console.WriteLine("  Description      : {0}\r\n", result["Description"]);
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  Description      : {0}\r\n", result["Description"])); }
+                    }
             }
             catch (Exception ex)
             {
                 Console.WriteLine("  [X] Exception: {0}", ex.Message);
-            }
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [X] Exception: {0}", ex.Message)); }
+                }
         }
 
         public static void ListAntiVirusWMI()
@@ -3252,17 +3618,22 @@ namespace Seatbelt
                 ManagementObjectCollection data = wmiData.Get();
 
                 Console.WriteLine("\r\n\r\n=== Registered Antivirus (via WMI) ===\r\n");
+                if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Registered Antivirus (via WMI) ===\r\n"); }
 
-                foreach (ManagementObject virusChecker in data)
+                    foreach (ManagementObject virusChecker in data)
                 {
                     Console.WriteLine("  Engine        : {0}", virusChecker["displayName"]);
-                    Console.WriteLine("  ProductEXE    : {0}", virusChecker["pathToSignedProductExe"]);
-                    Console.WriteLine("  ReportingEXE  : {0}\r\n", virusChecker["pathToSignedReportingExe"]);
-                }
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  Engine        : {0}", virusChecker["displayName"])); }
+                        Console.WriteLine("  ProductEXE    : {0}", virusChecker["pathToSignedProductExe"]);
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  ProductEXE    : {0}", virusChecker["pathToSignedProductExe"])); }
+                        Console.WriteLine("  ReportingEXE  : {0}\r\n", virusChecker["pathToSignedReportingExe"]);
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  ReportingEXE  : {0}\r\n", virusChecker["pathToSignedReportingExe"])); }
+                    }
             }
             catch (Exception ex)
             {
                 Console.WriteLine("  [X] Exception: {0}", ex.Message);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [X] Exception: {0}", ex.Message)); }
             }
         }
 
@@ -3973,8 +4344,10 @@ namespace Seatbelt
                 ManagementObjectCollection retObjectCollection = searcher.Get();
 
                 Console.WriteLine("\r\n\r\n=== Process Enumerations ===\r\n");
+                if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Process Enumerations ===\r\n"); }
 
                 Console.WriteLine("  * Potential Defensive Processes *\r\n");
+                if (LogToFile.enableLogging) { LogToFile.Write("  * Potential Defensive Processes *\r\n"); }
 
                 foreach (ManagementObject Process in retObjectCollection)
                 {
@@ -3986,24 +4359,31 @@ namespace Seatbelt
                             Process.InvokeMethod("GetOwner", (object[])OwnerInfo);
 
                             Console.WriteLine("\tName         : {0}", Process["Name"]);
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\tName         : {0}", Process["Name"])); }
                             Console.WriteLine("\tProduct      : {0}", defensiveProcess.Value);
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\tProduct      : {0}", defensiveProcess.Value)); }
                             Console.WriteLine("\tProcessID    : {0}", Process["ProcessID"]);
-                            if (OwnerInfo[0] != null)
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\tProcessID    : {0}", Process["ProcessID"])); }
+                                if (OwnerInfo[0] != null)
                             {
                                 Console.WriteLine("\tOwner        : {0}\\{1}", OwnerInfo[1], OwnerInfo[0]);
-                            }
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\tOwner        : {0}\\{1}", OwnerInfo[1], OwnerInfo[0])); }
+                                }
                             else
                             {
                                 Console.WriteLine("\tOwner        : ");
-                            }
+                                if (LogToFile.enableLogging) { LogToFile.Write("\tOwner        : "); }
+                                }
                             Console.WriteLine("\tCommandLine  : {0}\r\n", Process["CommandLine"]);
-                        }
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\tCommandLine  : {0}\r\n", Process["CommandLine"])); }
+                            }
                     }
                 }
 
                 Console.WriteLine("\r\n  * Browser Processes *\r\n");
+                if (LogToFile.enableLogging) { LogToFile.Write("\r\n  * Browser Processes *\r\n"); }
 
-                foreach (ManagementObject Process in retObjectCollection)
+                    foreach (ManagementObject Process in retObjectCollection)
                 {
                     foreach (DictionaryEntry browserProcess in browserProcesses)
                     {
@@ -4013,22 +4393,29 @@ namespace Seatbelt
                             Process.InvokeMethod("GetOwner", (object[])OwnerInfo);
 
                             Console.WriteLine("\tName         : {0}", Process["Name"]);
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\tName         : {0}", Process["Name"])); }
                             Console.WriteLine("\tProduct      : {0}", browserProcess.Value);
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\tProduct      : {0}", browserProcess.Value)); }
                             Console.WriteLine("\tProcessID    : {0}", Process["ProcessID"]);
-                            if (OwnerInfo[0] != null)
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\tProcessID    : {0}", Process["ProcessID"])); }
+                                if (OwnerInfo[0] != null)
                             {
                                 Console.WriteLine("\tOwner        : {0}\\{1}", OwnerInfo[1], OwnerInfo[0]);
-                            }
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\tOwner        : {0}\\{1}", OwnerInfo[1], OwnerInfo[0])); }
+                                }
                             else
                             {
                                 Console.WriteLine("\tOwner        : ");
-                            }
+                                if (LogToFile.enableLogging) { LogToFile.Write("\tOwner        : "); }
+                                }
                             Console.WriteLine("\tCommandLine  : {0}\r\n", Process["CommandLine"]);
-                        }
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\tCommandLine  : {0}\r\n", Process["CommandLine"])); }
+                            }
                     }
                 }
 
                 Console.WriteLine("\r\n  * Other Interesting Processes *\r\n");
+                if (LogToFile.enableLogging) { LogToFile.Write("\r\n  * Other Interesting Processes *\r\n"); }
 
                 foreach (ManagementObject Process in retObjectCollection)
                 {
@@ -4040,17 +4427,23 @@ namespace Seatbelt
                             Process.InvokeMethod("GetOwner", (object[])OwnerInfo);
 
                             Console.WriteLine("\tName         : {0}", Process["Name"]);
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\tName         : {0}", Process["Name"])); }
                             Console.WriteLine("\tProduct      : {0}", interestingProcess.Value);
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\tProduct      : {0}", interestingProcess.Value)); }
                             Console.WriteLine("\tProcessID    : {0}", Process["ProcessID"]);
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\tProcessID    : {0}", Process["ProcessID"])); }
                             if (OwnerInfo[0] != null)
                             {
                                 Console.WriteLine("\tOwner        : {0}\\{1}", OwnerInfo[1], OwnerInfo[0]);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\tOwner        : {0}\\{1}", OwnerInfo[1], OwnerInfo[0])); }
                             }
                             else
                             {
                                 Console.WriteLine("\tOwner        : ");
+                                if (LogToFile.enableLogging) { LogToFile.Write("\tOwner        : "); }
                             }
                             Console.WriteLine("\tCommandLine  : {0}\r\n", Process["CommandLine"]);
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\tCommandLine  : {0}\r\n", Process["CommandLine"])); }
                         }
                     }
                 }
@@ -4058,53 +4451,62 @@ namespace Seatbelt
             catch (Exception ex)
             {
                 Console.WriteLine("  [X] Exception: {0}", ex.Message);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [X] Exception: {0}", ex.Message)); }
             }
         }
 
         public static void ListRegistryAutoLogon()
         {
             Console.WriteLine("\r\n\r\n=== Registry Auto-logon Settings ===\r\n");
+            if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Registry Auto-logon Settings ===\r\n"); }
 
             string DefaultDomainName = GetRegValue("HKLM", "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon", "DefaultDomainName");
             if (DefaultDomainName != "")
             {
                 Console.WriteLine("  {0,-23} : {1}", "DefaultDomainName", DefaultDomainName);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,-23} : {1}", "DefaultDomainName", DefaultDomainName)); }
             }
 
             string DefaultUserName = GetRegValue("HKLM", "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon", "DefaultUserName");
             if (DefaultUserName != "")
             {
                 Console.WriteLine("  {0,-23} : {1}", "DefaultUserName", DefaultUserName);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,-23} : {1}", "DefaultUserName", DefaultUserName)); }
             }
 
             string DefaultPassword = GetRegValue("HKLM", "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon", "DefaultPassword");
             if (DefaultPassword != "")
             {
                 Console.WriteLine("  {0,-23} : {1}", "DefaultPassword", DefaultPassword);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,-23} : {1}", "DefaultPassword", DefaultPassword)); }
             }
 
             string AltDefaultDomainName = GetRegValue("HKLM", "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon", "AltDefaultDomainName");
             if (AltDefaultDomainName != "")
             {
                 Console.WriteLine("  {0,-23} : {1}", "AltDefaultDomainName", AltDefaultDomainName);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,-23} : {1}", "AltDefaultDomainName", AltDefaultDomainName)); }
             }
 
             string AltDefaultUserName = GetRegValue("HKLM", "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon", "AltDefaultUserName");
             if (AltDefaultDomainName != "")
             {
                 Console.WriteLine("  {0,-23} : {1}", "AltDefaultUserName", AltDefaultUserName);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,-23} : {1}", "AltDefaultUserName", AltDefaultUserName)); }
             }
 
             string AltDefaultPassword = GetRegValue("HKLM", "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon", "AltDefaultPassword");
             if (AltDefaultDomainName != "")
             {
                 Console.WriteLine("  {0,-23} : {1}", "AltDefaultPassword", AltDefaultPassword);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,-23} : {1}", "AltDefaultPassword", AltDefaultPassword)); }
             }
         }
 
         public static void ListRegistryAutoRuns()
         {
             Console.WriteLine("\r\n\r\n=== Registry Autoruns ===");
+            if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Registry Autoruns ==="); }
 
             string[] autorunLocations = new string[] {
                 "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run",
@@ -4123,9 +4525,11 @@ namespace Seatbelt
                 if ((settings != null) && (settings.Count != 0))
                 {
                     Console.WriteLine("\r\n  HKLM:\\{0} :", autorunLocation);
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\r\n  HKLM:\\{0} :", autorunLocation)); }
                     foreach (KeyValuePair<string, object> kvp in settings)
                     {
                         Console.WriteLine("    {0}", kvp.Value);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    {0}", kvp.Value)); }
                     }
                 }
             }
@@ -4139,6 +4543,7 @@ namespace Seatbelt
             server = OpenServer("localhost");
 
             Console.WriteLine("\r\n\r\n=== Current Host RDP Sessions (qwinsta) ===\r\n");
+            if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Current Host RDP Sessions (qwinsta) ===\r\n"); }
 
             try
             {
@@ -4158,10 +4563,15 @@ namespace Seatbelt
                         current += dataSize;
 
                         Console.WriteLine("  SessionID:       {0}", si.SessionID);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  SessionID:       {0}", si.SessionID)); }
                         Console.WriteLine("  SessionName:     {0}", si.pSessionName);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  SessionName:     {0}", si.pSessionName)); }
                         Console.WriteLine("  UserName:        {0}", si.pUserName);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  UserName:        {0}", si.pUserName)); }
                         Console.WriteLine("  DomainName:      {0}", si.pDomainName);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  DomainName:      {0}", si.pDomainName)); }
                         Console.WriteLine("  State:           {0}", si.State);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  State:           {0}", si.State)); }
 
                         // Now use WTSQuerySessionInformation to get the remote IP (if any) for the connection
                         IntPtr addressPtr = IntPtr.Zero;
@@ -4174,10 +4584,12 @@ namespace Seatbelt
                         {
                             string sourceIP = String.Format("{0}.{1}.{2}.{3}", address.Address[2], address.Address[3], address.Address[4], address.Address[5]);
                             Console.WriteLine("  SourceIP:        {0}\r\n", sourceIP);
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  SourceIP:        {0}\r\n", sourceIP)); }
                         }
                         else
                         {
                             Console.WriteLine("  SourceIP: \r\n");
+                            if (LogToFile.enableLogging) { LogToFile.Write("  SourceIP: \r\n"); }
                         }
                     }
 
@@ -4187,6 +4599,7 @@ namespace Seatbelt
             catch (Exception ex)
             {
                 Console.WriteLine(ex);
+                if (LogToFile.enableLogging) { LogToFile.Write(""); }
             }
             finally
             {
@@ -4202,10 +4615,12 @@ namespace Seatbelt
             if (FilterResults.filter)
             {
                 Console.WriteLine("\r\n\r\n=== Firewall Rules (Deny) ===\r\n");
+                if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Firewall Rules (Deny) ===\r\n"); }
             }
             else
             {
                 Console.WriteLine("\r\n\r\n=== Firewall Rules (All) ===\r\n");
+                if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Firewall Rules (All) ===\r\n"); }
             }
 
             try
@@ -4216,14 +4631,18 @@ namespace Seatbelt
                 Object types = firewallObj.GetType().InvokeMember("CurrentProfileTypes", BindingFlags.GetProperty, null, firewallObj, null);
 
                 Console.WriteLine("  Current Profile(s)          : {0}\r\n", (FirewallProfiles)Int32.Parse(types.ToString()));
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  Current Profile(s)          : {0}\r\n", (FirewallProfiles)Int32.Parse(types.ToString()))); }
 
                 // NET_FW_PROFILE2_DOMAIN = 1, NET_FW_PROFILE2_PRIVATE = 2, NET_FW_PROFILE2_PUBLIC = 4
                 Object enabledDomain = firewallObj.GetType().InvokeMember("FirewallEnabled", BindingFlags.GetProperty, null, firewallObj, new object[] { 1 });
                 Console.WriteLine("  FirewallEnabled (Domain)    : {0}", enabledDomain);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  FirewallEnabled (Domain)    : {0}", enabledDomain)); }
                 Object enabledPrivate = firewallObj.GetType().InvokeMember("FirewallEnabled", BindingFlags.GetProperty, null, firewallObj, new object[] { 2 });
                 Console.WriteLine("  FirewallEnabled (Private)   : {0}", enabledPrivate);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  FirewallEnabled (Private)   : {0}", enabledPrivate)); }
                 Object enabledPublic = firewallObj.GetType().InvokeMember("FirewallEnabled", BindingFlags.GetProperty, null, firewallObj, new object[] { 4 });
                 Console.WriteLine("  FirewallEnabled (Public)    : {0}\r\n", enabledPublic);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  FirewallEnabled (Public)    : {0}\r\n", enabledPublic)); }
 
                 // now grab all the rules
                 Object rules = firewallObj.GetType().InvokeMember("Rules", BindingFlags.GetProperty, null, firewallObj, null);
@@ -4276,14 +4695,23 @@ namespace Seatbelt
                             // TODO: other protocols!
 
                             Console.WriteLine("  Name                 : {0}", Name);
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  Name                 : {0}", Name)); }
                             Console.WriteLine("  Description          : {0}", Description);
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  Description          : {0}", Description)); }
                             Console.WriteLine("  ApplicationName      : {0}", ApplicationName);
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  ApplicationName      : {0}", ApplicationName)); }
                             Console.WriteLine("  Protocol             : {0}", ruleProtocol);
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  Protocol             : {0}", ruleProtocol)); }
                             Console.WriteLine("  Action               : {0}", ruleAction);
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  Action               : {0}", ruleAction)); }
                             Console.WriteLine("  Direction            : {0}", ruleDirection);
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  Direction            : {0}", ruleDirection)); }
                             Console.WriteLine("  Profiles             : {0}", (FirewallProfiles)Int32.Parse(Profiles.ToString()));
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  Profiles             : {0}", (FirewallProfiles)Int32.Parse(Profiles.ToString()))); }
                             Console.WriteLine("  Local Addr:Port      : {0}:{1}", LocalAddresses, LocalPorts);
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  Local Addr:Port      : {0}:{1}", LocalAddresses, LocalPorts)); }
                             Console.WriteLine("  Remote Addr:Port     : {0}:{1}\r\n", RemoteAddresses, RemotePorts);
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  Remote Addr:Port     : {0}:{1}\r\n", RemoteAddresses, RemotePorts)); }
                         }
                     }
                     // manually move the enumerator
@@ -4296,12 +4724,14 @@ namespace Seatbelt
             catch (Exception ex)
             {
                 Console.WriteLine("  [X] Exception: {0}", ex);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [X] Exception: {0}", ex)); }
             }
         }
 
         public static void ListDNSCache()
         {
             Console.WriteLine("\r\n\r\n=== DNS Cache (via WMI) ===\r\n");
+            if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== DNS Cache (via WMI) ===\r\n"); }
 
             // lists the local DNS cache via WMI (MSFT_DNSClientCache class)
             try
@@ -4312,17 +4742,22 @@ namespace Seatbelt
                 foreach (ManagementObject result in data)
                 {
                     Console.WriteLine("  Entry         : {0}", result["Entry"]);
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  Entry         : {0}", result["Entry"])); }
                     Console.WriteLine("  Name          : {0}", result["Name"]);
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  Name          : {0}", result["Name"])); }
                     Console.WriteLine("  Data          : {0}\r\n", result["Data"]);
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  Data          : {0}\r\n", result["Data"])); }
                 }
             }
             catch (ManagementException ex) when (ex.ErrorCode == ManagementStatus.InvalidNamespace)
             {
                 Console.WriteLine("  [X] 'MSFT_DNSClientCache' WMI class unavailable (minimum supported versions of Windows: 8/2012)", ex.Message);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [X] 'MSFT_DNSClientCache' WMI class unavailable (minimum supported versions of Windows: 8/2012)", ex.Message)); }
             }
             catch (Exception ex)
             {
                 Console.WriteLine("  [X] Exception: {0}", ex.Message);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [X] Exception: {0}", ex.Message)); }
             }
         }
 
@@ -4331,6 +4766,7 @@ namespace Seatbelt
             // adapted from Fred's code at https://social.technet.microsoft.com/Forums/lync/en-US/e949b8d6-17ad-4afc-88cd-0019a3ac9df9/powershell-alternative-to-arp-a?forum=ITCG
 
             Console.WriteLine("\r\n\r\n=== Current ARP Table ===");
+            if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Current ARP Table ==="); }
 
             try
             {
@@ -4394,6 +4830,7 @@ namespace Seatbelt
                 if (result != ERROR_INSUFFICIENT_BUFFER)
                 {
                     Console.WriteLine("  [X] Exception: {0}", result);
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [X] Exception: {0}", result)); }
                 }
 
                 IntPtr buffer = IntPtr.Zero;
@@ -4406,6 +4843,7 @@ namespace Seatbelt
                 if (result != 0)
                 {
                     Console.WriteLine("  [X] Exception allocating buffer: {0}", result);
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [X] Exception allocating buffer: {0}", result)); }
                 }
 
                 // now we have the buffer, we have to marshal it. We can read the first 4 bytes to get the length of the buffer
@@ -4436,12 +4874,15 @@ namespace Seatbelt
                         if (adapters.ContainsKey(indexAdapter))
                         {
                             Console.WriteLine("\r\n\r\n  Interface     : {0}", adapters[indexAdapter]);
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\r\n\r\n  Interface     : {0}", adapters[indexAdapter])); }
                         }
                         else
                         {
                             Console.WriteLine("\r\n\r\n  Interface     : n/a --- Index {0}", indexAdapter);
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\r\n\r\n  Interface     : n/a --- Index {0}", indexAdapter)); }
                         }
                         Console.WriteLine("    Internet Address      Physical Address      Type");
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    Internet Address      Physical Address      Type")); }
                         currentIndexAdaper = indexAdapter;
                     }
 
@@ -4451,6 +4892,7 @@ namespace Seatbelt
                     ArpEntryType entryType = (ArpEntryType)arpEntry.dwType;
 
                     Console.WriteLine(String.Format("    {0,-22}{1,-22}{2}", ipAddr, physAddr, entryType));
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format(String.Format("    {0,-22}{1,-22}{2}", ipAddr, physAddr, entryType))); }
                 }
 
                 FreeMibTable(buffer);
@@ -4458,6 +4900,7 @@ namespace Seatbelt
             catch (Exception ex)
             {
                 Console.WriteLine("  [X] Exception: {0}", ex);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [X] Exception: {0}", ex)); }
             }
         }
 
@@ -4493,6 +4936,7 @@ namespace Seatbelt
             Dictionary<string, string> processes = new Dictionary<string, string>();
 
             Console.WriteLine("\r\n\r\n=== Active TCP Network Connections ===\r\n");
+            if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Active TCP Network Connections ===\r\n"); }
 
             try
             {
@@ -4519,6 +4963,7 @@ namespace Seatbelt
                 {
                     // 122 == insufficient buffer size
                     Console.WriteLine(" [X] Bad check value from GetExtendedTcpTable : {0}", ret);
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format(" [X] Bad check value from GetExtendedTcpTable : {0}", ret)); }
                     return;
                 }
 
@@ -4528,6 +4973,7 @@ namespace Seatbelt
                 if (ret != ERROR_SUCCESS)
                 {
                     Console.WriteLine(" [X] Bad return value from GetExtendedTcpTable : {0}", ret);
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format(" [X] Bad return value from GetExtendedTcpTable : {0}", ret)); }
                     return;
                 }
 
@@ -4546,6 +4992,7 @@ namespace Seatbelt
                 }
 
                 Console.WriteLine("  Local Address          Foreign Address        State      PID   Service         ProcessName");
+                if (LogToFile.enableLogging) { LogToFile.Write("  Local Address          Foreign Address        State      PID   Service         ProcessName"); }
                 foreach (MIB_TCPROW_OWNER_MODULE entry in TcpRows)
                 {
                     string processName = "";
@@ -4558,11 +5005,13 @@ namespace Seatbelt
                     string serviceName = GetServiceNameFromTag(entry.OwningPid, (uint)entry.OwningModuleInfo0);
 
                     Console.WriteLine(String.Format("  {0,-23}{1,-23}{2,-11}{3,-6}{4,-15} {5}", entry.LocalAddress + ":" + entry.LocalPort, entry.RemoteAddress + ":" + entry.RemotePort, entry.State, entry.OwningPid, serviceName, processName));
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,-23}{1,-23}{2,-11}{3,-6}{4,-15} {5}", entry.LocalAddress + ":" + entry.LocalPort, entry.RemoteAddress + ":" + entry.RemotePort, entry.State, entry.OwningPid, serviceName, processName)); }
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine("  [X] Exception: {0}", ex.Message);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [X] Exception: {0}", ex.Message)); }
             }
             finally
             {
@@ -4585,6 +5034,7 @@ namespace Seatbelt
             Dictionary<string, string> processes = new Dictionary<string, string>();
 
             Console.WriteLine("\r\n\r\n=== Active UDP Network Connections ===\r\n");
+            if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Active UDP Network Connections ===\r\n"); }
 
             try
             {
@@ -4611,6 +5061,7 @@ namespace Seatbelt
                 {
                     // 122 == insufficient buffer size
                     Console.WriteLine(" [X] Bad check value from GetExtendedUdpTable : {0}", ret);
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format(" [X] Bad check value from GetExtendedUdpTable : {0}", ret)); }
                     return;
                 }
 
@@ -4620,6 +5071,7 @@ namespace Seatbelt
                 if (ret != ERROR_SUCCESS)
                 {
                     Console.WriteLine(" [X] Bad return value from GetExtendedUdpTable : {0}", ret);
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format(" [X] Bad return value from GetExtendedUdpTable : {0}", ret)); }
                     return;
                 }
 
@@ -4638,6 +5090,7 @@ namespace Seatbelt
                 }
 
                 Console.WriteLine("  Local Address          PID    Service                 ProcessName");
+                if (LogToFile.enableLogging) { LogToFile.Write("  Local Address          PID    Service                 ProcessName"); }
                 foreach (MIB_UDPROW_OWNER_MODULE entry in UdpRows)
                 {
                     string processName = "";
@@ -4650,11 +5103,13 @@ namespace Seatbelt
                     string serviceName = GetServiceNameFromTag(entry.OwningPid, (uint)entry.OwningModuleInfo0);
 
                     Console.WriteLine(String.Format("  {0,-23}{1,-7}{2,-23} {3}", entry.LocalAddress + ":" + entry.LocalPort, entry.OwningPid, serviceName, processName));
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,-23}{1,-7}{2,-23} {3}", entry.LocalAddress + ":" + entry.LocalPort, entry.OwningPid, serviceName, processName)); }
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine("  [X] Exception: {0}", ex.Message);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [X] Exception: {0}", ex.Message)); }
             }
             finally
             {
@@ -4673,10 +5128,12 @@ namespace Seatbelt
             if (FilterResults.filter)
             {
                 Console.WriteLine("\r\n\r\n=== Non Microsoft Processes (via WMI) ===\r\n");
+                if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Non Microsoft Processes (via WMI) ===\r\n"); }
             }
             else
             {
                 Console.WriteLine("\r\n\r\n=== All Processes (via WMI) ===\r\n");
+                if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== All Processes (via WMI) ===\r\n"); }
             }
 
             try
@@ -4725,11 +5182,17 @@ namespace Seatbelt
                                 }
 
                                 Console.WriteLine("  Name           : {0}", item.Process.ProcessName);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  Name           : {0}", item.Process.ProcessName)); }
                                 Console.WriteLine("  Company Name   : {0}", companyName);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  Company Name   : {0}", companyName)); }
                                 Console.WriteLine("  PID            : {0}", item.Process.Id);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  PID            : {0}", item.Process.Id)); }
                                 Console.WriteLine("  Path           : {0}", item.Path);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  Path           : {0}", item.Path)); }
                                 Console.WriteLine("  CommandLine    : {0}", item.CommandLine);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  CommandLine    : {0}", item.CommandLine)); }
                                 Console.WriteLine("  IsDotNet       : {0}\r\n", isDotNet);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  IsDotNet       : {0}\r\n", isDotNet)); }
                             }
                         }
                     }
@@ -4738,6 +5201,7 @@ namespace Seatbelt
             catch (Exception ex)
             {
                 Console.WriteLine("  [X] Exception: {0}", ex.Message);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [X] Exception: {0}", ex.Message)); }
             }
         }
 
@@ -4759,6 +5223,7 @@ namespace Seatbelt
             var endTime = System.DateTime.Now;
 
             Console.WriteLine("\r\n\r\n=== 4624 Account Logon Events (last {0} days) ===\r\n", lastDays);
+            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\r\n\r\n=== 4624 Account Logon Events (last {0} days) ===\r\n", lastDays)); }
 
             var query = string.Format(@"*[System/EventID={0}] and *[System[TimeCreated[@SystemTime >= '{1}']]] and *[System[TimeCreated[@SystemTime <= '{2}']]]",
                 eventId,
@@ -4809,14 +5274,23 @@ namespace Seatbelt
                     if (!m.Success)
                     {
                         Console.WriteLine("  UserName          : {0}", TargetUserName);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  UserName          : {0}", TargetUserName)); }
                         Console.WriteLine("  UserDomain        : {0}", TargetDomainName);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  UserDomain        : {0}", TargetDomainName)); }
                         Console.WriteLine("  UserSID           : {0}", TargetUserSid);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  UserSID           : {0}", TargetUserSid)); }
                         Console.WriteLine("  ProcessName       : {0}", ProcessName);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  ProcessName       : {0}", ProcessName)); }
                         Console.WriteLine("  LogonType         : {0}", LogonType);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  LogonType         : {0}", LogonType)); }
                         Console.WriteLine("  AuthPKG           : {0}", AuthenticationPackageName);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  AuthPKG           : {0}", AuthenticationPackageName)); }
                         Console.WriteLine("  LmPackageName     : {0}", LmPackageName);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  LmPackageName     : {0}", LmPackageName)); }
                         Console.WriteLine("  WorkstationName   : {0}", WorkstationName);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  WorkstationName   : {0}", WorkstationName)); }
                         Console.WriteLine("  TimeCreated       : {0}\r\n", eventdetail.TimeCreated.ToString());
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  TimeCreated       : {0}\r\n", eventdetail.TimeCreated.ToString())); }
 
                         //Console.WriteLine(eventdetail.FormatDescription());
                         //break;
@@ -4826,6 +5300,7 @@ namespace Seatbelt
             catch (Exception ex)
             {
                 Console.WriteLine("  [X] Exception: {0}", ex.Message);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [X] Exception: {0}", ex.Message)); }
             }
         }
 
@@ -4845,6 +5320,7 @@ namespace Seatbelt
             var endTime = System.DateTime.Now;
 
             Console.WriteLine("\r\n\r\n=== 4624 Explicit Credential Events (last {0} days) - Runas or Outbound RDP ===\r\n", lastDays);
+            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\r\n\r\n=== 4624 Explicit Credential Events (last {0} days) - Runas or Outbound RDP ===\r\n", lastDays)); }
 
 
             var query = string.Format(@"*[System/EventID={0}] and *[System[TimeCreated[@SystemTime >= '{1}']]] and *[System[TimeCreated[@SystemTime <= '{2}']]]",
@@ -4882,42 +5358,55 @@ namespace Seatbelt
                     if (!m.Success)
                     {
                         Console.WriteLine("  SubjectUserName        : {0}", SubjectUserName);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  SubjectUserName        : {0}", SubjectUserName)); }
                         Console.WriteLine("  SubjectDomainName      : {0}", SubjectDomainName);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  SubjectDomainName      : {0}", SubjectDomainName)); }
                         Console.WriteLine("  SubjectUserSid         : {0}", SubjectUserSid);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  SubjectUserSid         : {0}", SubjectUserSid)); }
                         Console.WriteLine("  TargetUserName         : {0}", TargetUserName);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  TargetUserName         : {0}", TargetUserName)); }
                         Console.WriteLine("  TargetDomainName       : {0}", TargetDomainName);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  TargetDomainName       : {0}", TargetDomainName)); }
                         Console.WriteLine("  TargetServerName       : {0}", TargetServerName);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  TargetServerName       : {0}", TargetServerName)); }
                         Console.WriteLine("  ProcessName            : {0}", ProcessName);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  ProcessName            : {0}", ProcessName)); }
                         Console.WriteLine("  TimeCreated            : {0}\r\n", eventdetail.TimeCreated.ToString());
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  TimeCreated            : {0}\r\n", eventdetail.TimeCreated.ToString())); }
                     }
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine("  [X] Exception: {0}", ex.Message);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [X] Exception: {0}", ex.Message)); }
             }
         }
 
         public static void ListSysmonConfig()
         {
             Console.WriteLine("\r\n\r\n=== Sysmon Configuration ===\r\n");
+            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\r\n\r\n=== Sysmon Configuration ===\r\n")); }
 
             string hashing = GetRegValue("HKLM", "SYSTEM\\CurrentControlSet\\Services\\SysmonDrv\\Parameters", "HashingAlgorithm");
             if (!String.IsNullOrEmpty(hashing))
             {
                 Console.WriteLine("  Hashing algorithm: {0}", hashing);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  Hashing algorithm: {0}", hashing)); }
             }
 
             string options = GetRegValue("HKLM", "SYSTEM\\CurrentControlSet\\Services\\SysmonDrv\\Parameters", "Options");
             if (!String.IsNullOrEmpty(options))
             {
                 Console.WriteLine("  Options: {0}", options);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  Options: {0}", options)); }
             }
 
             byte[] sysmonRules = GetRegValueBytes("HKLM", "SYSTEM\\CurrentControlSet\\Services\\SysmonDrv\\Parameters", "Rules");
             if (sysmonRules != null)
             {
                 Console.WriteLine("  Sysmon rules: " + Convert.ToBase64String(sysmonRules));
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  Sysmon rules: " + Convert.ToBase64String(sysmonRules))); }
             }
         }
 
@@ -4928,6 +5417,7 @@ namespace Seatbelt
             try
             {
                 Console.WriteLine("\r\n\r\n=== Current User's Groups ===\r\n");
+                if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Current User's Groups ===\r\n"); }
 
                 WindowsIdentity wi = WindowsIdentity.GetCurrent();
                 List<string> groups = new List<string>();
@@ -4944,11 +5434,13 @@ namespace Seatbelt
                 foreach (string group in groups)
                 {
                     Console.WriteLine("  {0}", group);
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0}", group)); }
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine("  [X] Exception: {0}", ex.Message);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [X] Exception: {0}", ex.Message)); }
             }
         }
 
@@ -4967,13 +5459,16 @@ namespace Seatbelt
                         if (subkeys != null)
                         {
                             Console.WriteLine("\r\n\r\n=== Saved RDP Connection Information ({0}) ===", SID);
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\r\n\r\n=== Saved RDP Connection Information ({0}) ===", SID)); }
                             foreach (string host in subkeys)
                             {
                                 string usernameHint = GetRegValue("HKCU", String.Format("Software\\Microsoft\\Terminal Server Client\\Servers\\{0}", host), "UsernameHint");
                                 Console.WriteLine("\r\n  Host           : {0}", host);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\r\n  Host           : {0}", host)); }
                                 if (usernameHint != "")
                                 {
                                     Console.WriteLine("    UsernameHint : {0}", usernameHint);
+                                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    UsernameHint : {0}", usernameHint)); }
                                 }
                             }
                         }
@@ -4983,6 +5478,7 @@ namespace Seatbelt
             else
             {
                 Console.WriteLine("\r\n\r\n=== Saved RDP Connection Information (Current User) ===");
+                if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Saved RDP Connection Information (Current User) ==="); }
                 string[] subkeys = GetRegSubkeys("HKCU", "Software\\Microsoft\\Terminal Server Client\\Servers");
                 if (subkeys != null)
                 {
@@ -4990,9 +5486,11 @@ namespace Seatbelt
                     {
                         string usernameHint = GetRegValue("HKCU", String.Format("Software\\Microsoft\\Terminal Server Client\\Servers\\{0}", host), "UsernameHint");
                         Console.WriteLine("\r\n  Host           : {0}", host);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\r\n  Host           : {0}", host)); }
                         if (usernameHint != "")
                         {
                             Console.WriteLine("    UsernameHint : {0}", usernameHint);
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    UsernameHint : {0}", usernameHint)); }
                         }
                     }
                 }
@@ -5007,6 +5505,7 @@ namespace Seatbelt
                 if (IsHighIntegrity())
                 {
                     Console.WriteLine("\r\n\r\n=== Checking for DPAPI Master Keys (All Users) ===\r\n");
+                    if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Checking for DPAPI Master Keys (All Users) ===\r\n"); }
 
                     string userFolder = String.Format("{0}\\Users\\", Environment.GetEnvironmentVariable("SystemDrive"));
                     string[] dirs = Directory.GetDirectories(userFolder);
@@ -5025,6 +5524,7 @@ namespace Seatbelt
                                     string[] files = Directory.GetFiles(directory);
 
                                     Console.WriteLine("    Folder       : {0}\r\n", directory);
+                                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    Folder       : {0}\r\n", directory)); }
 
                                     foreach (string file in files)
                                     {
@@ -5033,22 +5533,31 @@ namespace Seatbelt
                                             DateTime lastAccessed = System.IO.File.GetLastAccessTime(file);
                                             DateTime lastModified = System.IO.File.GetLastWriteTime(file);
                                             string fileName = System.IO.Path.GetFileName(file);
+
                                             Console.WriteLine("    MasterKey    : {0}", fileName);
+                                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    MasterKey    : {0}", fileName)); }
                                             Console.WriteLine("        Accessed : {0}", lastAccessed);
+                                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("        Accessed : {0}", lastAccessed)); }
                                             Console.WriteLine("        Modified : {0}\r\n", lastModified);
+                                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("        Modified : {0}\r\n", lastModified)); }
                                         }
                                     }
                                     Console.WriteLine();
+                                    if (LogToFile.enableLogging) { LogToFile.Write(""); }
                                 }
                             }
                         }
                     }
                     Console.WriteLine("  [*] Use the Mimikatz \"dpapi::masterkey\" module with appropriate arguments (/pvk or /rpc) to decrypt");
+                    if (LogToFile.enableLogging) { LogToFile.Write("  [*] Use the Mimikatz \"dpapi::masterkey\" module with appropriate arguments (/pvk or /rpc) to decrypt"); }
                     Console.WriteLine("  [*] You can also extract many DPAPI masterkeys from memory with the Mimikatz \"sekurlsa::dpapi\" module");
+                    if (LogToFile.enableLogging) { LogToFile.Write("  [*] You can also extract many DPAPI masterkeys from memory with the Mimikatz \"sekurlsa::dpapi\" module"); }
                 }
                 else
                 {
                     Console.WriteLine("\r\n\r\n=== Checking for DPAPI Master Keys (Current User) ===\r\n");
+                    if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Checking for DPAPI Master Keys (Current User) ===\r\n"); }
+
                     string userName = Environment.GetEnvironmentVariable("USERNAME");
                     string userDPAPIBasePath = String.Format("{0}\\AppData\\Roaming\\Microsoft\\Protect\\", System.Environment.GetEnvironmentVariable("USERPROFILE"));
 
@@ -5060,6 +5569,7 @@ namespace Seatbelt
                             string[] files = Directory.GetFiles(directory);
 
                             Console.WriteLine("    Folder       : {0}\r\n", directory);
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    Folder       : {0}\r\n", directory)); }
 
                             foreach (string file in files)
                             {
@@ -5069,18 +5579,23 @@ namespace Seatbelt
                                     DateTime lastModified = System.IO.File.GetLastWriteTime(file);
                                     string fileName = System.IO.Path.GetFileName(file);
                                     Console.WriteLine("    MasterKey    : {0}", fileName);
+                                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    MasterKey    : {0}", fileName)); }
                                     Console.WriteLine("        Accessed : {0}", lastAccessed);
+                                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("        Accessed : {0}", lastAccessed)); }
                                     Console.WriteLine("        Modified : {0}\r\n", lastModified);
+                                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("        Modified : {0}\r\n", lastModified)); }
                                 }
                             }
                         }
                     }
                     Console.WriteLine("  [*] Use the Mimikatz \"dpapi::masterkey\" module with appropriate arguments (/rpc) to decrypt");
+                    if (LogToFile.enableLogging) { LogToFile.Write("  [*] Use the Mimikatz \"dpapi::masterkey\" module with appropriate arguments (/rpc) to decrypt"); }
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine("  [X] Exception: {0}", ex.Message);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [X] Exception: {0}", ex.Message)); }
             }
         }
 
@@ -5092,6 +5607,7 @@ namespace Seatbelt
                 if (IsHighIntegrity())
                 {
                     Console.WriteLine("\r\n\r\n=== Checking for Credential Files (All Users) ===\r\n");
+                    if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Checking for Credential Files (All Users) ===\r\n"); }
 
                     string userFolder = String.Format("{0}\\Users\\", Environment.GetEnvironmentVariable("SystemDrive"));
                     string[] dirs = Directory.GetDirectories(userFolder);
@@ -5110,6 +5626,7 @@ namespace Seatbelt
                                 if ((systemFiles != null) && (systemFiles.Length != 0))
                                 {
                                     Console.WriteLine("\r\n    Folder       : {0}\r\n", userCredFilePath);
+                                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\r\n    Folder       : {0}\r\n", userCredFilePath)); }
 
                                     foreach (string file in systemFiles)
                                     {
@@ -5119,6 +5636,7 @@ namespace Seatbelt
                                         string fileName = System.IO.Path.GetFileName(file);
                                         found = true;
                                         Console.WriteLine("    CredFile     : {0}", fileName);
+                                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    CredFile     : {0}", fileName)); }
 
                                         // jankily parse the bytes to extract the credential type and master key GUID
                                         // reference- https://github.com/gentilkiwi/mimikatz/blob/3d8be22fff9f7222f9590aa007629e18300cf643/modules/kull_m_dpapi.h#L24-L54
@@ -5136,10 +5654,15 @@ namespace Seatbelt
 
                                         string desc = Encoding.Unicode.GetString(descBytes);
                                         Console.WriteLine("    Description  : {0}", desc);
+                                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    Description  : {0}", desc)); }
                                         Console.WriteLine("    MasterKey    : {0}", guidMasterKey.ToString());
+                                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    MasterKey    : {0}", guidMasterKey.ToString())); }
                                         Console.WriteLine("    Accessed     : {0}", lastAccessed);
+                                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    Accessed     : {0}", lastAccessed)); }
                                         Console.WriteLine("    Modified     : {0}", lastModified);
+                                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    Modified     : {0}", lastModified)); }
                                         Console.WriteLine("    Size         : {0}\r\n", size);
+                                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    Size         : {0}\r\n", size)); }
                                     }
                                 }
                             }
@@ -5151,6 +5674,7 @@ namespace Seatbelt
                     if ((files != null) && (files.Length != 0))
                     {
                         Console.WriteLine("\r\n    Folder       : {0}\r\n", systemFolder);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\r\n    Folder       : {0}\r\n", systemFolder)); }
 
                         foreach (string file in files)
                         {
@@ -5160,6 +5684,7 @@ namespace Seatbelt
                             string fileName = System.IO.Path.GetFileName(file);
                             found = true;
                             Console.WriteLine("    CredFile     : {0}", fileName);
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    CredFile     : {0}", fileName)); }
 
                             // jankily parse the bytes to extract the credential type and master key GUID
                             // reference- https://github.com/gentilkiwi/mimikatz/blob/3d8be22fff9f7222f9590aa007629e18300cf643/modules/kull_m_dpapi.h#L24-L54
@@ -5177,22 +5702,30 @@ namespace Seatbelt
 
                             string desc = Encoding.Unicode.GetString(descBytes);
                             Console.WriteLine("    Description  : {0}", desc);
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    Description  : {0}", desc)); }
                             Console.WriteLine("    MasterKey    : {0}", guidMasterKey.ToString());
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    MasterKey    : {0}", guidMasterKey.ToString())); }
                             Console.WriteLine("    Accessed     : {0}", lastAccessed);
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    Accessed     : {0}", lastAccessed)); }
                             Console.WriteLine("    Modified     : {0}", lastModified);
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    Modified     : {0}", lastModified)); }
                             Console.WriteLine("    Size         : {0}\r\n", size);
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    Size         : {0}\r\n", size)); }
                         }
                     }
 
                     if (found)
                     {
                         Console.WriteLine("  [*] Use the Mimikatz \"dpapi::cred\" module with appropriate /masterkey to decrypt");
+                        if (LogToFile.enableLogging) { LogToFile.Write("  [*] Use the Mimikatz \"dpapi::cred\" module with appropriate /masterkey to decrypt"); }
                         Console.WriteLine("  [*] You can extract many DPAPI masterkeys from memory with the Mimikatz \"sekurlsa::dpapi\" module");
+                        if (LogToFile.enableLogging) { LogToFile.Write("  [*] You can extract many DPAPI masterkeys from memory with the Mimikatz \"sekurlsa::dpapi\" module"); }
                     }
                 }
                 else
                 {
                     Console.WriteLine("\r\n\r\n=== Checking for Credential Files (Current User) ===\r\n");
+                    if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Checking for Credential Files (Current User) ===\r\n"); }
                     string userName = Environment.GetEnvironmentVariable("USERNAME");
                     string userCredFilePath = String.Format("{0}\\AppData\\Local\\Microsoft\\Credentials\\", System.Environment.GetEnvironmentVariable("USERPROFILE"));
                     bool found = false;
@@ -5201,6 +5734,7 @@ namespace Seatbelt
                     {
                         string[] files = Directory.GetFiles(userCredFilePath);
                         Console.WriteLine("    Folder       : {0}\r\n", userCredFilePath);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    Folder       : {0}\r\n", userCredFilePath)); }
 
                         foreach (string file in files)
                         {
@@ -5210,6 +5744,7 @@ namespace Seatbelt
                             string fileName = System.IO.Path.GetFileName(file);
                             found = true;
                             Console.WriteLine("    CredFile     : {0}", fileName);
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    CredFile     : {0}", fileName)); }
 
                             // jankily parse the bytes to extract the credential type and master key GUID
                             // reference- https://github.com/gentilkiwi/mimikatz/blob/3d8be22fff9f7222f9590aa007629e18300cf643/modules/kull_m_dpapi.h#L24-L54
@@ -5227,21 +5762,28 @@ namespace Seatbelt
 
                             string desc = Encoding.Unicode.GetString(descBytes);
                             Console.WriteLine("    Description  : {0}", desc);
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    Description  : {0}", desc)); }
                             Console.WriteLine("    MasterKey    : {0}", guidMasterKey.ToString());
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    MasterKey    : {0}", guidMasterKey.ToString())); }
                             Console.WriteLine("    Accessed     : {0}", lastAccessed);
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    Accessed     : {0}", lastAccessed)); }
                             Console.WriteLine("    Modified     : {0}", lastModified);
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    Modified     : {0}", lastModified)); }
                             Console.WriteLine("    Size         : {0}\r\n", size);
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    Size         : {0}\r\n", size)); }
                         }
                     }
                     if (found)
                     {
                         Console.WriteLine("  [*] Use the Mimikatz \"dpapi::cred\" module with appropriate /masterkey to decrypt");
+                        if (LogToFile.enableLogging) { LogToFile.Write("  [*] Use the Mimikatz \"dpapi::cred\" module with appropriate /masterkey to decrypt"); }
                     }
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine("  [X] Exception: {0}", ex.Message);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [X] Exception: {0}", ex.Message)); }
             }
         }
 
@@ -5253,6 +5795,7 @@ namespace Seatbelt
                 if (IsHighIntegrity())
                 {
                     Console.WriteLine("\r\n\r\n=== Checking for RDCMan Settings Files (All Users) ===\r\n");
+                    if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Checking for RDCMan Settings Files (All Users) ===\r\n"); }
 
                     string userFolder = String.Format("{0}\\Users\\", Environment.GetEnvironmentVariable("SystemDrive"));
                     string[] dirs = Directory.GetDirectories(userFolder);
@@ -5278,15 +5821,20 @@ namespace Seatbelt
                                 DateTime lastAccessed = System.IO.File.GetLastAccessTime(userRDManFile);
                                 DateTime lastModified = System.IO.File.GetLastWriteTime(userRDManFile);
                                 Console.WriteLine("    RDCManFile   : {0}", userRDManFile);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    RDCManFile   : {0}", userRDManFile)); }
                                 Console.WriteLine("    Accessed     : {0}", lastAccessed);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    Accessed     : {0}", lastAccessed)); }
                                 Console.WriteLine("    Modified     : {0}", lastModified);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    Modified     : {0}", lastModified)); }
 
                                 foreach (XmlNode rdgFile in items)
                                 {
                                     found = true;
                                     Console.WriteLine("      .RDG File  : {0}", rdgFile.InnerText);
+                                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      .RDG File  : {0}", rdgFile.InnerText)); }
                                 }
                                 Console.WriteLine();
+                                if (LogToFile.enableLogging) { LogToFile.Write(""); }
                             }
                         }
                     }
@@ -5294,12 +5842,15 @@ namespace Seatbelt
                     if (found)
                     {
                         Console.WriteLine("  [*] Use the Mimikatz \"dpapi::rdg\" module with appropriate /masterkey to decrypt any .rdg files");
+                        if (LogToFile.enableLogging) { LogToFile.Write("  [*] Use the Mimikatz \"dpapi::rdg\" module with appropriate /masterkey to decrypt any .rdg files"); }
                         Console.WriteLine("  [*] You can extract many DPAPI masterkeys from memory with the Mimikatz \"sekurlsa::dpapi\" module");
+                        if (LogToFile.enableLogging) { LogToFile.Write("  [*] You can extract many DPAPI masterkeys from memory with the Mimikatz \"sekurlsa::dpapi\" module"); }
                     }
                 }
                 else
                 {
                     Console.WriteLine("\r\n\r\n=== Checking for RDCMan Settings Files (Current User) ===\r\n");
+                    if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Checking for RDCMan Settings Files (Current User) ===\r\n"); }
                     bool found = false;
                     string userName = Environment.GetEnvironmentVariable("USERNAME");
                     string userRDManFile = String.Format("{0}\\AppData\\Local\\Microsoft\\Remote Desktop Connection Manager\\RDCMan.settings", System.Environment.GetEnvironmentVariable("USERPROFILE"));
@@ -5317,26 +5868,34 @@ namespace Seatbelt
                         DateTime lastAccessed = System.IO.File.GetLastAccessTime(userRDManFile);
                         DateTime lastModified = System.IO.File.GetLastWriteTime(userRDManFile);
                         Console.WriteLine("    RDCManFile   : {0}", userRDManFile);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    RDCManFile   : {0}", userRDManFile)); }
                         Console.WriteLine("    Accessed     : {0}", lastAccessed);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    Accessed     : {0}", lastAccessed)); }
                         Console.WriteLine("    Modified     : {0}", lastModified);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    Modified     : {0}", lastModified)); }
 
                         foreach (XmlNode rdgFile in items)
                         {
                             found = true;
                             Console.WriteLine("      .RDG File  : {0}", rdgFile.InnerText);
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      .RDG File  : {0}", rdgFile.InnerText)); }
                         }
                         Console.WriteLine();
+                        if (LogToFile.enableLogging) { LogToFile.Write(""); }
                     }
                     if (found)
                     {
                         Console.WriteLine("  [*] Use the Mimikatz \"dpapi::rdg\" module with appropriate /masterkey to decrypt any .rdg files");
+                        if (LogToFile.enableLogging) { LogToFile.Write("  [*] Use the Mimikatz \"dpapi::rdg\" module with appropriate /masterkey to decrypt any .rdg files"); }
                         Console.WriteLine("  [*] You can extract many DPAPI masterkeys from memory with the Mimikatz \"sekurlsa::dpapi\" module");
+                        if (LogToFile.enableLogging) { LogToFile.Write("  [*] You can extract many DPAPI masterkeys from memory with the Mimikatz \"sekurlsa::dpapi\" module"); }
                     }
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine("  [X] Exception: {0}", ex.Message);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [X] Exception: {0}", ex.Message)); }
             }
         }
 
@@ -5348,6 +5907,7 @@ namespace Seatbelt
             //  https://gist.github.com/yizhang82/a1268d3ea7295a8a1496e01d60ada816
 
             Console.WriteLine("\r\n\r\n=== Internet Explorer Open Tabs ===\r\n");
+            if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Internet Explorer Open Tabs ===\r\n"); }
 
             try
             {
@@ -5378,7 +5938,9 @@ namespace Seatbelt
                         if (Regex.IsMatch(locationURL.ToString(), @"(^https?://.+)|(^ftp://)"))
                         {
                             Console.WriteLine("  Location Name : {0}", locationName);
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  Location Name : {0}", locationName)); }
                             Console.WriteLine("  Location URL  : {0}\r\n", locationURL);
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  Location URL  : {0}\r\n", locationURL)); }
                         }
                         Marshal.ReleaseComObject(item);
                         item = null;
@@ -5396,6 +5958,7 @@ namespace Seatbelt
             catch (Exception ex2)
             {
                 Console.WriteLine("  [X] Exception: {0}", ex2);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [X] Exception: {0}", ex2)); }
             }
         }
         public static void TriageIE()
@@ -5416,6 +5979,7 @@ namespace Seatbelt
                 if (IsHighIntegrity())
                 {
                     Console.WriteLine("\r\n\r\n=== Internet Explorer (All Users) Last {0} Days ===", lastDays);
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\r\n\r\n=== Internet Explorer (All Users) Last {0} Days ===", lastDays)); }
 
                     string[] SIDs = Registry.Users.GetSubKeyNames();
                     foreach (string SID in SIDs)
@@ -5426,6 +5990,7 @@ namespace Seatbelt
                             if ((settings != null) && (settings.Count > 1))
                             {
                                 Console.WriteLine("\r\n  History ({0}):", SID);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\r\n  History ({0}):", SID)); }
                                 foreach (KeyValuePair<string, object> kvp in settings)
                                 {
                                     byte[] timeBytes = GetRegValueBytes("HKU", String.Format("{0}\\SOFTWARE\\Microsoft\\Internet Explorer\\TypedURLsTime", SID), kvp.Key.ToString().Trim());
@@ -5436,6 +6001,7 @@ namespace Seatbelt
                                         if (urlTime > startTime)
                                         {
                                             Console.WriteLine("    {0,-23} :  {1}", urlTime, kvp.Value.ToString().Trim());
+                                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    {0,-23} :  {1}", urlTime, kvp.Value.ToString().Trim())); }
                                         }
                                     }
                                 }
@@ -5459,6 +6025,7 @@ namespace Seatbelt
                                 if (bookmarkPaths.Length != 0)
                                 {
                                     Console.WriteLine("\r\n  Favorites ({0}):", userName);
+                                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\r\n  Favorites ({0}):", userName)); }
 
                                     foreach (string bookmarkPath in bookmarkPaths)
                                     {
@@ -5476,6 +6043,7 @@ namespace Seatbelt
                                                 }
                                             }
                                             Console.WriteLine("    {0}", url.ToString().Trim());
+                                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    {0}", url.ToString().Trim())); }
                                         }
                                     }
                                 }
@@ -5486,8 +6054,10 @@ namespace Seatbelt
                 else
                 {
                     Console.WriteLine("\r\n\r\n=== Internet Explorer (Current User) Last {0} Days ===", lastDays);
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\r\n\r\n=== Internet Explorer (Current User) Last {0} Days ===", lastDays)); }
 
                     Console.WriteLine("\r\n  History:");
+                    if (LogToFile.enableLogging) { LogToFile.Write("\r\n  History:"); }
                     Dictionary<string, object> settings = GetRegValues("HKCU", "SOFTWARE\\Microsoft\\Internet Explorer\\TypedURLs");
                     if ((settings != null) && (settings.Count != 0))
                     {
@@ -5501,6 +6071,7 @@ namespace Seatbelt
                                 if (urlTime > startTime)
                                 {
                                     Console.WriteLine("    {0,-23} :  {1}", urlTime, kvp.Value.ToString().Trim());
+                                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    {0,-23} :  {1}", urlTime, kvp.Value.ToString().Trim())); }
                                 }
                             }
                         }
@@ -5508,6 +6079,7 @@ namespace Seatbelt
 
 
                     Console.WriteLine("\r\n  Favorites:");
+                    if (LogToFile.enableLogging) { LogToFile.Write("\r\n  Favorites:"); }
                     string userIEBookmarkPath = String.Format("{0}\\Favorites\\", System.Environment.GetEnvironmentVariable("USERPROFILE"));
 
                     string[] bookmarkPaths = Directory.GetFiles(userIEBookmarkPath, "*.url", SearchOption.AllDirectories);
@@ -5528,6 +6100,7 @@ namespace Seatbelt
                                 }
                             }
                             Console.WriteLine("    {0}", url.ToString().Trim());
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    {0}", url.ToString().Trim())); }
                         }
                     }
                 }
@@ -5535,6 +6108,7 @@ namespace Seatbelt
             catch (Exception ex)
             {
                 Console.WriteLine("  [X] Exception: {0}", ex);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [X] Exception: {0}", ex)); }
             }
         }
 
@@ -5594,6 +6168,8 @@ namespace Seatbelt
         {
             // pulled directly from @djhohnstein's SharpWeb project: https://github.com/djhohnstein/SharpWeb/blob/master/Edge/SharpEdge.cs
             Console.WriteLine("\r\n\r\n=== Checking Windows Vaults ===");
+            if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Checking Windows Vaults ==="); }
+
             var OSVersion = Environment.OSVersion.Version;
             var OSMajor = OSVersion.Major;
             var OSMinor = OSVersion.Minor;
@@ -5618,6 +6194,7 @@ namespace Seatbelt
             if ((int)result != 0)
             {
                 Console.WriteLine("  [ERROR] Unable to enumerate vaults. Error (0x" + result.ToString() + ")");
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [ERROR] Unable to enumerate vaults. Error (0x" + result.ToString() + ")")); }
                 return;
             }
 
@@ -5654,13 +6231,16 @@ namespace Seatbelt
                 if (result != 0)
                 {
                     Console.WriteLine("  [ERROR] Unable to open the following vault: " + vaultType + ". Error: 0x" + result.ToString());
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [ERROR] Unable to open the following vault: " + vaultType + ". Error: 0x" + result.ToString())); }
                     return;
                 }
                 // Vault opened successfully! Continue.
 
 
                 Console.WriteLine("\r\n  Vault GUID     : {0}", vaultGuid);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\r\n  Vault GUID     : {0}", vaultGuid)); }
                 Console.WriteLine("  Vault Type     : {0}\r\n", vaultType);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  Vault Type     : {0}\r\n", vaultType)); }
 
                 // Fetch all items within Vault
                 int vaultItemCount = 0;
@@ -5669,6 +6249,7 @@ namespace Seatbelt
                 if (result != 0)
                 {
                     Console.WriteLine("  [ERROR] Unable to enumerate vault items from the following vault: " + vaultType + ". Error 0x" + result.ToString());
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [ERROR] Unable to enumerate vault items from the following vault: " + vaultType + ". Error 0x" + result.ToString())); }
                     return;
                 }
                 var structAddress = vaultItemPtr;
@@ -5708,6 +6289,7 @@ namespace Seatbelt
                         if (result != 0)
                         {
                             Console.WriteLine("  [ERROR] occured while retrieving vault item. Error: 0x" + result.ToString());
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [ERROR] occured while retrieving vault item. Error: 0x" + result.ToString())); }
                             return;
                         }
                         object passwordItem = System.Runtime.InteropServices.Marshal.PtrToStructure(passwordVaultItem, VAULT_ITEM);
@@ -5728,20 +6310,26 @@ namespace Seatbelt
                             if (resource != null)
                             {
                                 Console.WriteLine("    Resource     : {0}", resource);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    Resource     : {0}", resource)); }
                             }
                             object identity = GetVaultElementValue(pIdentityElement);
                             if (identity != null)
                             {
                                 Console.WriteLine("    Identity     : {0}", identity);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    Identity     : {0}", identity)); }
                             }
                             if (packageSid != null)
                             {
                                 Console.WriteLine("    PacakgeSid  : {0}", packageSid);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    PacakgeSid  : {0}", packageSid)); }
                             }
                             Console.WriteLine("    Credential   : {0}", cred);
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    Credential   : {0}", cred)); }
                             // Stupid datetime
                             Console.WriteLine("    LastModified : {0}", System.DateTime.FromFileTimeUtc((long)lastModified));
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    LastModified : {0}", System.DateTime.FromFileTimeUtc((long)lastModified))); }
                             Console.WriteLine();
+                            if (LogToFile.enableLogging) { LogToFile.Write(""); }
                         }
                     }
                 }
@@ -5756,6 +6344,7 @@ namespace Seatbelt
                 if (IsHighIntegrity())
                 {
                     Console.WriteLine("\r\n\r\n=== Checking for Chrome (All Users) ===\r\n");
+                    if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Checking for Chrome (All Users) ===\r\n"); }
 
                     string userFolder = String.Format("{0}\\Users\\", Environment.GetEnvironmentVariable("SystemDrive"));
                     string[] dirs = Directory.GetDirectories(userFolder);
@@ -5770,26 +6359,33 @@ namespace Seatbelt
                             if (System.IO.File.Exists(userChromeHistoryPath))
                             {
                                 Console.WriteLine("  [*] Chrome history file exists at {0}", userChromeHistoryPath);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [*] Chrome history file exists at {0}", userChromeHistoryPath)); }
                                 Console.WriteLine("      Run the 'TriageChrome' command\r\n");
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      Run the 'TriageChrome' command\r\n")); }
                                 found = true;
                             }
                             string userChromeCookiesPath = String.Format("{0}\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Cookies", dir);
                             if (System.IO.File.Exists(userChromeCookiesPath))
                             {
                                 Console.WriteLine("  [*] Chrome cookies database exists at {0}", userChromeCookiesPath);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [*] Chrome cookies database exists at {0}", userChromeCookiesPath)); }
                                 Console.WriteLine("      Run the Mimikatz \"dpapi::chrome\" module\r\n");
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      Run the Mimikatz \"dpapi::chrome\" module\r\n")); }
                                 found = true;
                             }
                             string userChromeLoginDataPath = String.Format("{0}\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Login Data", dir);
                             if (System.IO.File.Exists(userChromeLoginDataPath))
                             {
                                 Console.WriteLine("  [*] Chrome saved login database exists at {0}", userChromeLoginDataPath);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [*] Chrome saved login database exists at {0}", userChromeLoginDataPath)); }
                                 Console.WriteLine("      Run the Mimikatz \"dpapi::chrome\" module or SharpWeb (https://github.com/djhohnstein/SharpWeb)\r\n");
+                                if (LogToFile.enableLogging) { LogToFile.Write("      Run the Mimikatz \"dpapi::chrome\" module or SharpWeb (https://github.com/djhohnstein/SharpWeb)\r\n"); }
                                 found = true;
                             }
                             if (found)
                             {
                                 Console.WriteLine();
+                                if (LogToFile.enableLogging) { LogToFile.Write(""); }
                             }
                         }
                     }
@@ -5797,29 +6393,37 @@ namespace Seatbelt
                 else
                 {
                     Console.WriteLine("\r\n\r\n=== Checking for Chrome (Current User) ===\r\n");
+                    if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Checking for Chrome (Current User) ===\r\n"); }
                     string userChromeHistoryPath = String.Format("{0}\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\History", System.Environment.GetEnvironmentVariable("USERPROFILE"));
                     if (System.IO.File.Exists(userChromeHistoryPath))
                     {
                         Console.WriteLine("  [*] Chrome history file exists at {0}", userChromeHistoryPath);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [*] Chrome history file exists at {0}", userChromeHistoryPath)); }
                         Console.WriteLine("      Run the 'TriageChrome' command\r\n");
+                        if (LogToFile.enableLogging) { LogToFile.Write("      Run the 'TriageChrome' command\r\n"); }
                     }
                     string userChromeCookiesPath = String.Format("{0}\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Cookies", System.Environment.GetEnvironmentVariable("USERPROFILE"));
                     if (System.IO.File.Exists(userChromeCookiesPath))
                     {
                         Console.WriteLine("  [*] Chrome cookies database exists at {0}", userChromeCookiesPath);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [*] Chrome cookies database exists at {0}", userChromeCookiesPath)); }
                         Console.WriteLine("      Run the Mimikatz \"dpapi::chrome\" module\r\n");
+                        if (LogToFile.enableLogging) { LogToFile.Write("      Run the Mimikatz \"dpapi::chrome\" module\r\n"); }
                     }
                     string userChromeLoginDataPath = String.Format("{0}\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Login Data", System.Environment.GetEnvironmentVariable("USERPROFILE"));
                     if (System.IO.File.Exists(userChromeLoginDataPath))
                     {
                         Console.WriteLine("  [*] Chrome saved login database exists at {0}", userChromeLoginDataPath);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [*] Chrome saved login database exists at {0}", userChromeLoginDataPath)); }
                         Console.WriteLine("      Run the Mimikatz \"dpapi::chrome\" module or SharpWeb (https://github.com/djhohnstein/SharpWeb)");
+                        if (LogToFile.enableLogging) { LogToFile.Write("      Run the Mimikatz \"dpapi::chrome\" module or SharpWeb (https://github.com/djhohnstein/SharpWeb)"); }
                     }
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine("  [X] Exception: {0}", ex.Message);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [X] Exception: {0}", ex.Message)); }
             }
         }
         public static void ParseChromeHistory(string path, string user)
@@ -5828,6 +6432,8 @@ namespace Seatbelt
             if (System.IO.File.Exists(path))
             {
                 Console.WriteLine("\r\n    History ({0}):\r\n", user);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\r\n    History ({0}):\r\n", user)); }
+
                 Regex historyRegex = new Regex(@"(http|ftp|https|file)://([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:/~+#-]*[\w@?^=%&/~+#-])?");
 
                 try
@@ -5841,6 +6447,7 @@ namespace Seatbelt
                             if (m.Success)
                             {
                                 Console.WriteLine("      {0}", m.Groups[0].ToString().Trim());
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      {0}", m.Groups[0].ToString().Trim())); }
                             }
                         }
                     }
@@ -5848,10 +6455,12 @@ namespace Seatbelt
                 catch (System.IO.IOException exception)
                 {
                     Console.WriteLine("\r\n    [x] IO exception, history file likely in use (i.e. Browser is likely running): ", exception.Message);
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\r\n    [x] IO exception, history file likely in use (i.e. Browser is likely running): ", exception.Message)); }
                 }
                 catch (Exception exception)
                 {
                     Console.WriteLine("\r\n    [x] Exception: {0}", exception.Message);
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\r\n    [x] Exception: {0}", exception.Message)); }
                 }
             }
         }
@@ -5861,6 +6470,7 @@ namespace Seatbelt
             if (System.IO.File.Exists(path))
             {
                 Console.WriteLine("\r\n    Bookmarks ({0}):\r\n", user);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\r\n    Bookmarks ({0}):\r\n", user)); }
 
                 try
                 {
@@ -5876,16 +6486,20 @@ namespace Seatbelt
                     foreach (Dictionary<string, object> entry in children)
                     {
                         Console.WriteLine("      Name: {0}", entry["name"].ToString().Trim());
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      Name: {0}", entry["name"].ToString().Trim())); }
                         Console.WriteLine("      Url:  {0}\r\n", entry["url"].ToString().Trim());
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      Url:  {0}\r\n", entry["url"].ToString().Trim())); }
                     }
                 }
                 catch (System.IO.IOException exception)
                 {
                     Console.WriteLine("\r\n    [x] IO exception, Bookmarks file likely in use (i.e. Chrome is likely running).", exception.Message);
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\r\n    [x] IO exception, Bookmarks file likely in use (i.e. Chrome is likely running).", exception.Message)); }
                 }
                 catch (Exception exception)
                 {
                     Console.WriteLine("\r\n    [x] Exception: {0}", exception.Message);
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\r\n    [x] Exception: {0}", exception.Message)); }
                 }
             }
         }
@@ -5896,6 +6510,7 @@ namespace Seatbelt
                 if (IsHighIntegrity())
                 {
                     Console.WriteLine("\r\n\r\n=== Chrome (All Users) ===");
+                    if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Chrome (All Users) ==="); }
 
                     string userFolder = String.Format("{0}\\Users\\", Environment.GetEnvironmentVariable("SystemDrive"));
                     string[] dirs = Directory.GetDirectories(userFolder);
@@ -5916,6 +6531,7 @@ namespace Seatbelt
                 else
                 {
                     Console.WriteLine("\r\n\r\n=== Chrome (Current User) ===");
+                    if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Chrome (Current User) ==="); }
 
                     string userChromeHistoryPath = String.Format("{0}\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\History", System.Environment.GetEnvironmentVariable("USERPROFILE"));
                     ParseChromeHistory(userChromeHistoryPath, System.Environment.GetEnvironmentVariable("USERNAME"));
@@ -5928,6 +6544,7 @@ namespace Seatbelt
             catch (Exception ex)
             {
                 Console.WriteLine("  [X] Exception: {0}", ex.Message);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [X] Exception: {0}", ex.Message)); }
             }
         }
 
@@ -5939,6 +6556,7 @@ namespace Seatbelt
                 if (IsHighIntegrity())
                 {
                     Console.WriteLine("\r\n\r\n=== Checking for Firefox (All Users) ===\r\n");
+                    if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Checking for Firefox (All Users) ===\r\n"); }
 
                     string userFolder = String.Format("{0}\\Users\\", Environment.GetEnvironmentVariable("SystemDrive"));
                     string[] dirs = Directory.GetDirectories(userFolder);
@@ -5959,27 +6577,34 @@ namespace Seatbelt
                                     if (System.IO.File.Exists(firefoxHistoryFile))
                                     {
                                         Console.WriteLine("  [*] Firefox history file exists at {0}", firefoxHistoryFile);
+                                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [*] Firefox history file exists at {0}", firefoxHistoryFile)); }
                                         Console.WriteLine("      Run the 'TriageFirefox' command\r\n");
+                                        if (LogToFile.enableLogging) { LogToFile.Write("      Run the 'TriageFirefox' command\r\n"); }
                                         found = true;
                                     }
                                     string firefoxCredentialFile3 = String.Format("{0}\\{1}", directory, "key3.db");
                                     if (System.IO.File.Exists(firefoxCredentialFile3))
                                     {
                                         Console.WriteLine("  [*] Firefox credential file exists at {0}", firefoxCredentialFile3);
+                                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [*] Firefox credential file exists at {0}", firefoxCredentialFile3)); }
                                         Console.WriteLine("      Run SharpWeb (https://github.com/djhohnstein/SharpWeb) \r\n");
+                                        if (LogToFile.enableLogging) { LogToFile.Write("      Run SharpWeb (https://github.com/djhohnstein/SharpWeb) \r\n"); }
                                         found = true;
                                     }
                                     string firefoxCredentialFile4 = String.Format("{0}\\{1}", directory, "key4.db");
                                     if (System.IO.File.Exists(firefoxCredentialFile4))
                                     {
                                         Console.WriteLine("  [*] Firefox credential file exists at {0}", firefoxCredentialFile4);
+                                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [*] Firefox credential file exists at {0}", firefoxCredentialFile4)); }
                                         Console.WriteLine("      Run SharpWeb (https://github.com/djhohnstein/SharpWeb) \r\n");
+                                        if (LogToFile.enableLogging) { LogToFile.Write("      Run SharpWeb (https://github.com/djhohnstein/SharpWeb) \r\n"); }
                                         found = true;
                                     }
                                 }
                                 if (found)
                                 {
                                     Console.WriteLine();
+                                    if (LogToFile.enableLogging) { LogToFile.Write(""); }
                                 }
                             }
                         }
@@ -5988,6 +6613,8 @@ namespace Seatbelt
                 else
                 {
                     Console.WriteLine("\r\n\r\n=== Checking for Firefox (Current User) ===\r\n");
+                    if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Checking for Firefox (Current User) ===\r\n"); }
+
                     string userName = Environment.GetEnvironmentVariable("USERNAME");
                     string userFirefoxBasePath = String.Format("{0}\\AppData\\Roaming\\Mozilla\\Firefox\\Profiles\\", System.Environment.GetEnvironmentVariable("USERPROFILE"));
 
@@ -6000,19 +6627,25 @@ namespace Seatbelt
                             if (System.IO.File.Exists(firefoxHistoryFile))
                             {
                                 Console.WriteLine("  [*] Firefox history file exists at {0}", firefoxHistoryFile);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [*] Firefox history file exists at {0}", firefoxHistoryFile)); }
                                 Console.WriteLine("      Run the 'TriageFirefox' command\r\n");
+                                if (LogToFile.enableLogging) { LogToFile.Write("      Run the 'TriageFirefox' command\r\n"); }
                             }
                             string firefoxCredentialFile3 = String.Format("{0}\\{1}", directory, "key3.db");
                             if (System.IO.File.Exists(firefoxCredentialFile3))
                             {
                                 Console.WriteLine("  [*] Firefox credential file exists at {0}", firefoxCredentialFile3);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [*] Firefox credential file exists at {0}", firefoxCredentialFile3)); }
                                 Console.WriteLine("      Run SharpWeb (https://github.com/djhohnstein/SharpWeb)\r\n");
+                                if (LogToFile.enableLogging) { LogToFile.Write("      Run SharpWeb (https://github.com/djhohnstein/SharpWeb)\r\n"); }
                             }
                             string firefoxCredentialFile4 = String.Format("{0}\\{1}", directory, "key4.db");
                             if (System.IO.File.Exists(firefoxCredentialFile4))
                             {
                                 Console.WriteLine("  [*] Firefox credential file exists at {0}", firefoxCredentialFile4);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [*] Firefox credential file exists at {0}", firefoxCredentialFile4)); }
                                 Console.WriteLine("      Run SharpWeb (https://github.com/djhohnstein/SharpWeb)\r\n");
+                                if (LogToFile.enableLogging) { LogToFile.Write("      Run SharpWeb (https://github.com/djhohnstein/SharpWeb)\r\n"); }
                             }
                         }
                     }
@@ -6021,6 +6654,7 @@ namespace Seatbelt
             catch (Exception ex)
             {
                 Console.WriteLine("  [X] Exception: {0}", ex.Message);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [X] Exception: {0}", ex.Message)); }
             }
         }
         public static void ParseFirefoxHistory(string path, string user)
@@ -6034,6 +6668,8 @@ namespace Seatbelt
                     string firefoxHistoryFile = String.Format("{0}\\{1}", directory, "places.sqlite");
 
                     Console.WriteLine("\r\n    History ({0}):\r\n", user);
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\r\n    History ({0}):\r\n", user)); }
+
                     Regex historyRegex = new Regex(@"(http|ftp|https|file)://([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:/~+#-]*[\w@?^=%&/~+#-])?");
 
                     try
@@ -6047,6 +6683,7 @@ namespace Seatbelt
                                 if (m.Success)
                                 {
                                     Console.WriteLine("      {0}", m.Groups[0].ToString().Trim());
+                                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      {0}", m.Groups[0].ToString().Trim())); }
                                 }
                             }
                         }
@@ -6054,10 +6691,12 @@ namespace Seatbelt
                     catch (System.IO.IOException exception)
                     {
                         Console.WriteLine("\r\n    [x] IO exception, places.sqlite file likely in use (i.e. Firefox is likely running).", exception.Message);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\r\n    [x] IO exception, places.sqlite file likely in use (i.e. Firefox is likely running).", exception.Message)); }
                     }
                     catch (Exception exception)
                     {
                         Console.WriteLine("\r\n    [x] Exception: {0}", exception.Message);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\r\n    [x] Exception: {0}", exception.Message)); }
                     }
                 }
             }
@@ -6069,6 +6708,7 @@ namespace Seatbelt
                 if (IsHighIntegrity())
                 {
                     Console.WriteLine("\r\n\r\n=== Firefox (All Users) ===");
+                    if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Firefox (All Users) ==="); }
 
                     string userFolder = String.Format("{0}\\Users\\", Environment.GetEnvironmentVariable("SystemDrive"));
                     string[] dirs = Directory.GetDirectories(userFolder);
@@ -6086,6 +6726,8 @@ namespace Seatbelt
                 else
                 {
                     Console.WriteLine("\r\n\r\n=== Firefox (Current User) ===");
+                    if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Firefox (Current User) ==="); }
+
                     string userName = Environment.GetEnvironmentVariable("USERNAME");
 
                     string userFirefoxBasePath = String.Format("{0}\\AppData\\Roaming\\Mozilla\\Firefox\\Profiles\\", System.Environment.GetEnvironmentVariable("USERPROFILE"));
@@ -6095,6 +6737,7 @@ namespace Seatbelt
             catch (Exception ex)
             {
                 Console.WriteLine("  [X] Exception: {0}", ex.Message);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [X] Exception: {0}", ex.Message)); }
             }
         }
 
@@ -6104,6 +6747,7 @@ namespace Seatbelt
             if (IsHighIntegrity())
             {
                 Console.WriteLine("\r\n\r\n=== Recent Typed RUN Commands (All Users) ===");
+                if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Recent Typed RUN Commands (All Users) ==="); }
 
                 string[] SIDs = Registry.Users.GetSubKeyNames();
                 foreach (string SID in SIDs)
@@ -6114,9 +6758,11 @@ namespace Seatbelt
                         if ((recentCommands != null) && (recentCommands.Count != 0))
                         {
                             Console.WriteLine("\r\n    {0} :", SID);
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\r\n    {0} :", SID)); }
                             foreach (KeyValuePair<string, object> kvp in recentCommands)
                             {
                                 Console.WriteLine("      {0,-10} :  {1}", kvp.Key, kvp.Value);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      {0,-10} :  {1}", kvp.Key, kvp.Value)); }
                             }
                         }
                     }
@@ -6125,6 +6771,7 @@ namespace Seatbelt
             else
             {
                 Console.WriteLine("\r\n\r\n=== Recent Typed RUN Commands (Current User) ===\r\n");
+                if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Recent Typed RUN Commands (Current User) ===\r\n"); }
 
                 Dictionary<string, object> recentCommands = GetRegValues("HKCU", "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU");
                 if ((recentCommands != null) && (recentCommands.Count != 0))
@@ -6132,6 +6779,7 @@ namespace Seatbelt
                     foreach (KeyValuePair<string, object> kvp in recentCommands)
                     {
                         Console.WriteLine("    {0,-10} :  {1}", kvp.Key, kvp.Value);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    {0,-10} :  {1}", kvp.Key, kvp.Value)); }
                     }
                 }
             }
@@ -6143,6 +6791,7 @@ namespace Seatbelt
             if (IsHighIntegrity())
             {
                 Console.WriteLine("\r\n\r\n=== Putty Saved Session Information (All Users) ===\r\n");
+                if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Putty Saved Session Information (All Users) ===\r\n"); }
 
                 string[] SIDs = Registry.Users.GetSubKeyNames();
                 foreach (string SID in SIDs)
@@ -6154,7 +6803,9 @@ namespace Seatbelt
                         foreach (string sessionName in subKeys)
                         {
                             Console.WriteLine("    {0,-20}  :  {1}", "User SID", SID);
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    {0,-20}  :  {1}", "User SID", SID)); }
                             Console.WriteLine("    {0,-20}  :  {1}", "SessionName", sessionName);
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    {0,-20}  :  {1}", "SessionName", sessionName)); }
 
                             string[] keys =
                             {
@@ -6171,9 +6822,11 @@ namespace Seatbelt
                                 if (!String.IsNullOrEmpty(result))
                                 {
                                     Console.WriteLine("    {0,-20}  :  {1}", key, result);
+                                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    {0,-20}  :  {1}", key, result)); }
                                 }
                             }
                             Console.WriteLine();
+                            if (LogToFile.enableLogging) { LogToFile.Write(""); }
                         }
                     }
                 }
@@ -6181,11 +6834,13 @@ namespace Seatbelt
             else
             {
                 Console.WriteLine("\r\n\r\n=== Putty Saved Session Information (Current User) ===\r\n");
+                if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Putty Saved Session Information (Current User) ===\r\n"); }
 
                 string[] subKeys = GetRegSubkeys("HKCU", "Software\\SimonTatham\\PuTTY\\Sessions\\");
                 foreach (string sessionName in subKeys)
                 {
                     Console.WriteLine("    {0,-20}  :  {1}", "SessionName", sessionName);
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    {0,-20}  :  {1}", "SessionName", sessionName)); }
 
                     string[] keys =
                     {
@@ -6202,9 +6857,11 @@ namespace Seatbelt
                         if (!String.IsNullOrEmpty(result))
                         {
                             Console.WriteLine("    {0,-20}  :  {1}", key, result);
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    {0,-20}  :  {1}", key, result)); }
                         }
                     }
                     Console.WriteLine();
+                    if (LogToFile.enableLogging) { LogToFile.Write(""); }
                 }
             }
         }
@@ -6215,6 +6872,7 @@ namespace Seatbelt
             if (IsHighIntegrity())
             {
                 Console.WriteLine("\r\n\r\n=== Putty SSH Host Hosts (All Users) ===\r\n");
+                if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Putty SSH Host Hosts (All Users) ===\r\n"); }
 
                 string[] SIDs = Registry.Users.GetSubKeyNames();
                 foreach (string SID in SIDs)
@@ -6225,9 +6883,11 @@ namespace Seatbelt
                         if ((hostKeys != null) && (hostKeys.Count != 0))
                         {
                             Console.WriteLine("    {0} :", SID);
+                            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    {0} :", SID)); }
                             foreach (KeyValuePair<string, object> kvp in hostKeys)
                             {
                                 Console.WriteLine("      {0,-10}", kvp.Key);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      {0,-10}", kvp.Key)); }
                             }
                         }
                     }
@@ -6236,6 +6896,7 @@ namespace Seatbelt
             else
             {
                 Console.WriteLine("\r\n\r\n=== Putty SSH Host Key Recent Hosts (Current User) ===\r\n");
+                if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Putty SSH Host Key Recent Hosts (Current User) ===\r\n"); }
 
                 Dictionary<string, object> hostKeys = GetRegValues("HKCU", "Software\\SimonTatham\\PuTTY\\SshHostKeys\\");
                 if ((hostKeys != null) && (hostKeys.Count != 0))
@@ -6243,6 +6904,7 @@ namespace Seatbelt
                     foreach (KeyValuePair<string, object> kvp in hostKeys)
                     {
                         Console.WriteLine("    {0,-10}", kvp.Key);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    {0,-10}", kvp.Key)); }
                     }
                 }
             }
@@ -6268,6 +6930,7 @@ namespace Seatbelt
                 if (IsHighIntegrity())
                 {
                     Console.WriteLine("\r\n\r\n=== Checking for Cloud Credentials (All Users) ===\r\n");
+                    if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Checking for Cloud Credentials (All Users) ===\r\n"); }
 
                     string userFolder = String.Format("{0}\\Users\\", Environment.GetEnvironmentVariable("SystemDrive"));
                     string[] dirs = Directory.GetDirectories(userFolder);
@@ -6284,10 +6947,14 @@ namespace Seatbelt
                                 DateTime lastAccessed = System.IO.File.GetLastAccessTime(awsKeyFile);
                                 DateTime lastModified = System.IO.File.GetLastWriteTime(awsKeyFile);
                                 long size = new System.IO.FileInfo(awsKeyFile).Length;
-                                Console.WriteLine("  [*] AWS key file exists at     : {0}", awsKeyFile);
+                                Console.WriteLine("  [*] AWS key file exists at     : {0}", awsKeyFile);  
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [*] AWS key file exists at     : {0}", awsKeyFile)); }
                                 Console.WriteLine("      Accessed                   : {0}", lastAccessed);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      Accessed                   : {0}", lastAccessed)); }
                                 Console.WriteLine("      Modified                   : {0}", lastModified);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      Modified                   : {0}", lastModified)); }
                                 Console.WriteLine("      Size                       : {0}\r\n", size);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      Size                       : {0}\r\n", size)); }
                                 found = true;
                             }
                             string computeCredsDb = String.Format("{0}\\AppData\\Roaming\\gcloud\\credentials.db", dir);
@@ -6297,9 +6964,13 @@ namespace Seatbelt
                                 DateTime lastModified = System.IO.File.GetLastWriteTime(computeCredsDb);
                                 long size = new System.IO.FileInfo(computeCredsDb).Length;
                                 Console.WriteLine("  [*] Compute creds at           : {0}", computeCredsDb);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [*] Compute creds at           : {0}", computeCredsDb)); }
                                 Console.WriteLine("      Accessed                   : {0}", lastAccessed);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      Accessed                   : {0}", lastAccessed)); }
                                 Console.WriteLine("      Modified                   : {0}", lastModified);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      Modified                   : {0}", lastModified)); }
                                 Console.WriteLine("      Size                       : {0}\r\n", size);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      Size                       : {0}\r\n", size)); }
                                 found = true;
                             }
                             string computeLegacyCreds = String.Format("{0}\\AppData\\Roaming\\gcloud\\legacy_credentials", dir);
@@ -6309,9 +6980,13 @@ namespace Seatbelt
                                 DateTime lastModified = System.IO.File.GetLastWriteTime(computeLegacyCreds);
                                 long size = new System.IO.FileInfo(computeLegacyCreds).Length;
                                 Console.WriteLine("  [*] Compute legacy creds at    : {0}", computeLegacyCreds);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [*] Compute legacy creds at    : {0}", computeLegacyCreds)); }
                                 Console.WriteLine("      Accessed                   : {0}", lastAccessed);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      Accessed                   : {0}", lastAccessed)); }
                                 Console.WriteLine("      Modified                   : {0}", lastModified);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      Modified                   : {0}", lastModified)); }
                                 Console.WriteLine("      Size                       : {0}\r\n", size);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      Size                       : {0}\r\n", size)); }
                                 found = true;
                             }
                             string computeAccessTokensDb = String.Format("{0}\\AppData\\Roaming\\gcloud\\access_tokens.db", dir);
@@ -6321,9 +6996,13 @@ namespace Seatbelt
                                 DateTime lastModified = System.IO.File.GetLastWriteTime(computeAccessTokensDb);
                                 long size = new System.IO.FileInfo(computeAccessTokensDb).Length;
                                 Console.WriteLine("  [*] Compute access tokens at   : {0}", computeAccessTokensDb);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [*] Compute access tokens at   : {0}", computeAccessTokensDb)); }
                                 Console.WriteLine("      Accessed                   : {0}", lastAccessed);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      Accessed                   : {0}", lastAccessed)); }
                                 Console.WriteLine("      Modified                   : {0}", lastModified);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      Modified                   : {0}", lastModified)); }
                                 Console.WriteLine("      Size                       : {0}\r\n", size);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      Size                       : {0}\r\n", size)); }
                                 found = true;
                             }
                             string azureTokens = String.Format("{0}\\.azure\\accessTokens.json", dir);
@@ -6332,10 +7011,14 @@ namespace Seatbelt
                                 DateTime lastAccessed = System.IO.File.GetLastAccessTime(azureTokens);
                                 DateTime lastModified = System.IO.File.GetLastWriteTime(azureTokens);
                                 long size = new System.IO.FileInfo(azureTokens).Length;
-                                Console.WriteLine("  [*] Azure access tokens at     : {0}", azureTokens);
+                                Console.WriteLine("  [*] Azure access tokens at     : {0}", azureTokens); 
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [*] Azure access tokens at     : {0}", azureTokens)); }
                                 Console.WriteLine("      Accessed                   : {0}", lastAccessed);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      Accessed                   : {0}", lastAccessed)); }
                                 Console.WriteLine("      Modified                   : {0}", lastModified);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      Modified                   : {0}", lastModified)); }
                                 Console.WriteLine("      Size                       : {0}\r\n", size);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      Size                       : {0}\r\n", size)); }
                                 found = true;
                             }
                             string azureProfile = String.Format("{0}\\.azure\\azureProfile.json", dir);
@@ -6345,14 +7028,19 @@ namespace Seatbelt
                                 DateTime lastModified = System.IO.File.GetLastWriteTime(azureProfile);
                                 long size = new System.IO.FileInfo(azureProfile).Length;
                                 Console.WriteLine("  [*] Azure profile at           : {0}", azureProfile);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [*] Azure profile at           : {0}", azureProfile)); }
                                 Console.WriteLine("      Accessed                   : {0}", lastAccessed);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      Accessed                   : {0}", lastAccessed)); }
                                 Console.WriteLine("      Modified                   : {0}", lastModified);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      Modified                   : {0}", lastModified)); }
                                 Console.WriteLine("      Size                       : {0}\r\n", size);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      Size                       : {0}\r\n", size)); }
                                 found = true;
                             }
                             if (found)
                             {
                                 System.Console.WriteLine();
+                                if (LogToFile.enableLogging) { LogToFile.Write(""); }
                             }
                         }
                     }
@@ -6360,6 +7048,7 @@ namespace Seatbelt
                 else
                 {
                     Console.WriteLine("\r\n\r\n=== Checking for Cloud Credentials (Current User) ===\r\n");
+                    if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Checking for Cloud Credentials (Current User) ===\r\n"); }
 
                     string awsKeyFile = String.Format("{0}\\.aws\\credentials", System.Environment.GetEnvironmentVariable("USERPROFILE"));
                     if (System.IO.File.Exists(awsKeyFile))
@@ -6367,10 +7056,14 @@ namespace Seatbelt
                         DateTime lastAccessed = System.IO.File.GetLastAccessTime(awsKeyFile);
                         DateTime lastModified = System.IO.File.GetLastWriteTime(awsKeyFile);
                         long size = new System.IO.FileInfo(awsKeyFile).Length;
-                        Console.WriteLine("  [*] AWS key file exists at     : {0}", awsKeyFile);
+                        Console.WriteLine("  [*] AWS key file exists at     : {0}", awsKeyFile);  
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [*] AWS key file exists at     : {0}", awsKeyFile)); }
                         Console.WriteLine("      Accessed                   : {0}", lastAccessed);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      Accessed                   : {0}", lastAccessed)); }
                         Console.WriteLine("      Modified                   : {0}", lastModified);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      Modified                   : {0}", lastModified)); }
                         Console.WriteLine("      Size                       : {0}\r\n", size);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      Size                       : {0}\r\n", size)); }
                     }
                     string computeCredsDb = String.Format("{0}\\AppData\\Roaming\\gcloud\\credentials.db", System.Environment.GetEnvironmentVariable("USERPROFILE"));
                     if (System.IO.File.Exists(computeCredsDb))
@@ -6379,9 +7072,13 @@ namespace Seatbelt
                         DateTime lastModified = System.IO.File.GetLastWriteTime(computeCredsDb);
                         long size = new System.IO.FileInfo(computeCredsDb).Length;
                         Console.WriteLine("  [*] Compute creds at           : {0}", computeCredsDb);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [*] Compute creds at           : {0}", computeCredsDb)); }
                         Console.WriteLine("      Accessed                   : {0}", lastAccessed);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      Accessed                   : {0}", lastAccessed)); }
                         Console.WriteLine("      Modified                   : {0}", lastModified);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      Modified                   : {0}", lastModified)); }
                         Console.WriteLine("      Size                       : {0}\r\n", size);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      Size                       : {0}\r\n", size)); }
                     }
                     string computeLegacyCreds = String.Format("{0}\\AppData\\Roaming\\gcloud\\legacy_credentials", System.Environment.GetEnvironmentVariable("USERPROFILE"));
                     if (System.IO.File.Exists(computeLegacyCreds))
@@ -6390,9 +7087,13 @@ namespace Seatbelt
                         DateTime lastModified = System.IO.File.GetLastWriteTime(computeLegacyCreds);
                         long size = new System.IO.FileInfo(computeLegacyCreds).Length;
                         Console.WriteLine("  [*] Compute legacy creds at    : {0}", computeLegacyCreds);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [*] Compute legacy creds at    : {0}", computeLegacyCreds)); }
                         Console.WriteLine("      Accessed                   : {0}", lastAccessed);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      Accessed                   : {0}", lastAccessed)); }
                         Console.WriteLine("      Modified                   : {0}", lastModified);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      Modified                   : {0}", lastModified)); }
                         Console.WriteLine("      Size                       : {0}\r\n", size);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      Size                       : {0}\r\n", size)); }
                     }
                     string computeAccessTokensDb = String.Format("{0}\\AppData\\Roaming\\gcloud\\access_tokens.db", System.Environment.GetEnvironmentVariable("USERPROFILE"));
                     if (System.IO.File.Exists(computeAccessTokensDb))
@@ -6401,9 +7102,13 @@ namespace Seatbelt
                         DateTime lastModified = System.IO.File.GetLastWriteTime(computeAccessTokensDb);
                         long size = new System.IO.FileInfo(computeAccessTokensDb).Length;
                         Console.WriteLine("  [*] Compute access tokens at   : {0}", computeAccessTokensDb);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [*] Compute access tokens at   : {0}", computeAccessTokensDb)); }
                         Console.WriteLine("      Accessed                   : {0}", lastAccessed);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      Accessed                   : {0}", lastAccessed)); }
                         Console.WriteLine("      Modified                   : {0}", lastModified);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      Modified                   : {0}", lastModified)); }
                         Console.WriteLine("      Size                       : {0}\r\n", size);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      Size                       : {0}\r\n", size)); }
                     }
                     string azureTokens = String.Format("{0}\\.azure\\accessTokens.json", System.Environment.GetEnvironmentVariable("USERPROFILE"));
                     if (System.IO.File.Exists(azureTokens))
@@ -6411,10 +7116,14 @@ namespace Seatbelt
                         DateTime lastAccessed = System.IO.File.GetLastAccessTime(azureTokens);
                         DateTime lastModified = System.IO.File.GetLastWriteTime(azureTokens);
                         long size = new System.IO.FileInfo(azureTokens).Length;
-                        Console.WriteLine("  [*] Azure access tokens at     : {0}", azureTokens);
+                        Console.WriteLine("  [*] Azure access tokens at     : {0}", azureTokens); 
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [*] Azure access tokens at     : {0}", azureTokens)); }
                         Console.WriteLine("      Accessed                   : {0}", lastAccessed);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      Accessed                   : {0}", lastAccessed)); }
                         Console.WriteLine("      Modified                   : {0}", lastModified);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      Modified                   : {0}", lastModified)); }
                         Console.WriteLine("      Size                       : {0}\r\n", size);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      Size                       : {0}\r\n", size)); }
                     }
                     string azureProfile = String.Format("{0}\\.azure\\azureProfile.json", System.Environment.GetEnvironmentVariable("USERPROFILE"));
                     if (System.IO.File.Exists(azureProfile))
@@ -6423,15 +7132,20 @@ namespace Seatbelt
                         DateTime lastModified = System.IO.File.GetLastWriteTime(azureProfile);
                         long size = new System.IO.FileInfo(azureProfile).Length;
                         Console.WriteLine("  [*] Azure profile at           : {0}", azureProfile);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [*] Azure profile at           : {0}", azureProfile)); }
                         Console.WriteLine("      Accessed                   : {0}", lastAccessed);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      Accessed                   : {0}", lastAccessed)); }
                         Console.WriteLine("      Modified                   : {0}", lastModified);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      Modified                   : {0}", lastModified)); }
                         Console.WriteLine("      Size                       : {0}\r\n", size);
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      Size                       : {0}\r\n", size)); }
                     }
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine("  [X] Exception: {0}", ex.Message);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [X] Exception: {0}", ex.Message)); }
             }
         }
 
@@ -6457,6 +7171,7 @@ namespace Seatbelt
                 if (IsHighIntegrity())
                 {
                     Console.WriteLine("\r\n\r\n=== Recently Accessed Files (All Users) Last {0} Days ===\r\n", lastDays);
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\r\n\r\n=== Recently Accessed Files (All Users) Last {0} Days ===\r\n", lastDays)); }
 
                     string userFolder = String.Format("{0}\\Users\\", Environment.GetEnvironmentVariable("SystemDrive"));
                     string[] dirs = Directory.GetDirectories(userFolder);
@@ -6475,6 +7190,8 @@ namespace Seatbelt
                                 if (recentFiles.Length != 0)
                                 {
                                     Console.WriteLine("   {0} :\r\n", userName);
+                                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("   {0} :\r\n", userName)); }
+
                                     foreach (string recentFile in recentFiles)
                                     {
                                         DateTime lastAccessed = System.IO.File.GetLastAccessTime(recentFile);
@@ -6488,7 +7205,9 @@ namespace Seatbelt
                                             if (TargetPath.ToString().Trim() != "")
                                             {
                                                 Console.WriteLine("      Target:       {0,-10}", TargetPath.ToString());
+                                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("      Target:       {0,-10}", TargetPath.ToString())); }
                                                 Console.WriteLine("          Accessed: {0}\r\n", lastAccessed);
+                                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("          Accessed: {0}\r\n", lastAccessed)); }
                                             }
                                             Marshal.ReleaseComObject(shortcut);
                                             shortcut = null;
@@ -6503,6 +7222,7 @@ namespace Seatbelt
                 else
                 {
                     Console.WriteLine("\r\n\r\n=== Recently Accessed Files (Current User) Last {0} Days ===\r\n", lastDays);
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\r\n\r\n=== Recently Accessed Files (Current User) Last {0} Days ===\r\n", lastDays)); }
 
                     string recentPath = String.Format("{0}\\Microsoft\\Windows\\Recent\\", System.Environment.GetEnvironmentVariable("APPDATA"));
 
@@ -6524,7 +7244,9 @@ namespace Seatbelt
                             if (TargetPath.ToString().Trim() != "")
                             {
                                 Console.WriteLine("    Target:       {0,-10}", TargetPath.ToString());
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    Target:       {0,-10}", TargetPath.ToString())); }
                                 Console.WriteLine("        Accessed: {0}\r\n", lastAccessed);
+                                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("        Accessed: {0}\r\n", lastAccessed)); }
                             }
                             Marshal.ReleaseComObject(shortcut);
                             shortcut = null;
@@ -6538,6 +7260,7 @@ namespace Seatbelt
             catch (Exception ex)
             {
                 Console.WriteLine("  [X] Exception: {0}", ex.Message);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [X] Exception: {0}", ex.Message)); }
             }
         }
 
@@ -6549,6 +7272,7 @@ namespace Seatbelt
             if (IsHighIntegrity())
             {
                 Console.WriteLine("\r\n\r\n=== Interesting Files (All Users) ===\r\n");
+                if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Interesting Files (All Users) ===\r\n"); }
 
                 string searchPath = String.Format("{0}\\Users\\", Environment.GetEnvironmentVariable("SystemDrive"));
 
@@ -6559,14 +7283,18 @@ namespace Seatbelt
                     DateTime lastAccessed = System.IO.File.GetLastAccessTime(file);
                     DateTime lastModified = System.IO.File.GetLastWriteTime(file);
                     Console.WriteLine("    File:         {0}", file);
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    File:         {0}", file)); }
                     Console.WriteLine("        Accessed: {0}", lastAccessed);
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("        Accessed: {0}", lastAccessed)); }
                     Console.WriteLine("        Modified: {0}", lastModified);
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("        Modified: {0}", lastModified)); }
                 }
             }
 
             else
             {
                 Console.WriteLine("\r\n\r\n=== Interesting Files (Current User) ===\r\n");
+                if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Interesting Files (Current User) ===\r\n"); }
 
                 string searchPath = Environment.GetEnvironmentVariable("USERPROFILE");
 
@@ -6577,8 +7305,11 @@ namespace Seatbelt
                     DateTime lastAccessed = System.IO.File.GetLastAccessTime(file);
                     DateTime lastModified = System.IO.File.GetLastWriteTime(file);
                     Console.WriteLine("    File:         {0}", file);
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("    File:         {0}", file)); }
                     Console.WriteLine("        Accessed: {0}", lastAccessed);
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("        Accessed: {0}", lastAccessed)); }
                     Console.WriteLine("        Modified: {0}", lastModified);
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("        Modified: {0}", lastModified)); }
                 }
             }
         }
@@ -6594,16 +7325,20 @@ namespace Seatbelt
                 ManagementObjectCollection data = wmiData.Get();
 
                 Console.WriteLine("\r\n\r\n=== Installed Patches (via WMI) ===\r\n");
+                if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Installed Patches (via WMI) ===\r\n"); }
                 Console.WriteLine("  HotFixID   InstalledOn    Description");
+                if (LogToFile.enableLogging) { LogToFile.Write("  HotFixID   InstalledOn    Description"); }
 
                 foreach (ManagementObject result in data)
                 {
                     Console.WriteLine(String.Format("  {0,-11}{1,-15}{2}", result["HotFixID"], result["InstalledOn"], result["Description"]));
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  {0,-11}{1,-15}{2}", result["HotFixID"], result["InstalledOn"], result["Description"])); }
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine("  [X] Exception: {0}", ex.Message);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  [X] Exception: {0}", ex.Message)); }
             }
         }
 
@@ -6613,6 +7348,7 @@ namespace Seatbelt
 
             // Reference: https://stackoverflow.com/questions/18071412/list-filenames-in-the-recyclebin-with-c-sharp-without-using-any-external-files
             Console.WriteLine("\r\n\r\n=== Recycle Bin Files Within the last 30 Days ===\r\n");
+            if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n=== Recycle Bin Files Within the last 30 Days ===\r\n"); }
 
             int lastDays = 30;
 
@@ -6645,10 +7381,15 @@ namespace Seatbelt
                     Object Size = item.GetType().InvokeMember("Size", BindingFlags.GetProperty, null, item, null);
                     Object DeletedFrom = item.GetType().InvokeMember("ExtendedProperty", BindingFlags.InvokeMethod, null, item, new object[] { "System.Recycle.DeletedFrom" });
                     Console.WriteLine("  Name           : {0}", Name);
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  Name           : {0}", Name)); }
                     Console.WriteLine("  Path           : {0}", Path);
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  Path           : {0}", Path)); }
                     Console.WriteLine("  Size           : {0}", Size);
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  Size           : {0}", Size)); }
                     Console.WriteLine("  Deleted From   : {0}", DeletedFrom);
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  Deleted From   : {0}", DeletedFrom)); }
                     Console.WriteLine("  Date Deleted   : {0}\r\n", DateDeleted);
+                    if (LogToFile.enableLogging) { LogToFile.Write(String.Format("  Date Deleted   : {0}\r\n", DateDeleted)); }
                 }
                 Marshal.ReleaseComObject(item);
                 item = null;
@@ -6664,6 +7405,7 @@ namespace Seatbelt
         public static void SystemChecks()
         {
             Console.WriteLine("\r\n=== Running System Triage Checks ===\r\n");
+            if (LogToFile.enableLogging) { LogToFile.Write("\r\n=== Running System Triage Checks ===\r\n"); }
             ListBasicOSInfo();
             ListRebootSchedule();
             ListTokenGroupPrivs();
@@ -6705,6 +7447,7 @@ namespace Seatbelt
             if (IsHighIntegrity())
             {
                 Console.WriteLine("\r\n\r\n [*] In high integrity, performing elevated collection options.");
+                if (LogToFile.enableLogging) { LogToFile.Write("\r\n\r\n [*] In high integrity, performing elevated collection options."); }
                 ListSysmonConfig();
             }
         }
@@ -6712,16 +7455,21 @@ namespace Seatbelt
         public static void UserChecks()
         {
             Console.WriteLine("\r\n=== Running User Triage Checks ===\r\n");
+            if (LogToFile.enableLogging) { LogToFile.Write("\r\n=== Running User Triage Checks ===\r\n"); }
 
             if (IsHighIntegrity())
             {
                 Console.WriteLine("\r\n [*] In high integrity, attempting triage for all users on the machine.");
+                if (LogToFile.enableLogging) { LogToFile.Write("\r\n [*] In high integrity, attempting triage for all users on the machine."); }
                 Console.WriteLine("\r\n     Current user : {0} - {1} ", WindowsIdentity.GetCurrent().Name, WindowsIdentity.GetCurrent().User);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\r\n     Current user : {0} - {1} ", WindowsIdentity.GetCurrent().Name, WindowsIdentity.GetCurrent().User)); }
             }
             else
             {
                 Console.WriteLine("\r\n [*] In medium integrity, attempting triage of current user.");
+                if (LogToFile.enableLogging) { LogToFile.Write("\r\n [*] In medium integrity, attempting triage of current user."); }
                 Console.WriteLine("\r\n     Current user : {0} - {1} ", WindowsIdentity.GetCurrent().Name, WindowsIdentity.GetCurrent().User);
+                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\r\n     Current user : {0} - {1} ", WindowsIdentity.GetCurrent().Name, WindowsIdentity.GetCurrent().User)); }
             }
 
             CheckFirefox();
@@ -6820,107 +7568,130 @@ namespace Seatbelt
 
             var watch = System.Diagnostics.Stopwatch.StartNew();
 
-            if (args.Length != 0)
+            //if (args.Length != 0)
+            //{
+            //    foreach (string arg in args)
+            //    {
+            //        if (string.Equals(arg, "full", StringComparison.CurrentCultureIgnoreCase))
+            //        {
+            //            FilterResults.filter = false;
+            //        }
+            //    }
+
+            //    foreach (string arg in args)
+            //    {
+            //        if (string.Equals(arg, "full", StringComparison.CurrentCultureIgnoreCase))
+            //        {
+            //            FilterResults.filter = false;
+            //            if (args.Length == 1)
+            //            {
+            //                // if "full" is the only argument, run System and User triage
+            //                SystemChecks();
+            //                ListKerberosTickets();
+            //                UserChecks();
+            //                ListIETabs();
+            //                ListPatches();
+            //                ListRecycleBin();
+
+            //                watch.Stop();
+            //                Console.WriteLine("\r\n\r\n[*] Completed All Safety Checks with no filtering in {0} seconds\r\n", (watch.ElapsedMilliseconds / 1000));
+            //                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\r\n\r\n[*] Completed All Safety Checks with no filtering in {0} seconds\r\n", (watch.ElapsedMilliseconds / 1000))); }
+            //                fs.Close();
+            //                return;
+            //            }
+            //        }
+            //        if (string.Equals(arg, "all", StringComparison.CurrentCultureIgnoreCase))
+            //        {
+            //            SystemChecks();
+            //            ListKerberosTickets();
+            //            UserChecks();
+            //            ListIETabs();
+            //            ListPatches();
+            //            TriageChrome();
+            //            TriageFirefox();
+            //            ListRecycleBin();
+            //            ListInterestingFiles();
+            //            fs.Close();
+            //            watch.Stop();
+            //            Console.WriteLine("\r\n\r\n[*] Completed All Safety Checks in {0} seconds\r\n", (watch.ElapsedMilliseconds / 1000));
+            //            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\r\n\r\n[*] Completed All Safety Checks in {0} seconds\r\n", (watch.ElapsedMilliseconds / 1000))); }
+            //            return;
+            //        }
+            //    }
+
+            //    foreach (string arg in args)
+            //    {
+            //        if (string.Equals(arg, "full", StringComparison.CurrentCultureIgnoreCase)) { }
+            //        else if (string.Equals(arg, "system", StringComparison.CurrentCultureIgnoreCase))
+            //        {
+            //            SystemChecks();
+            //        }
+            //        else if (string.Equals(arg, "user", StringComparison.CurrentCultureIgnoreCase))
+            //        {
+            //            UserChecks();
+            //        }
+            //        else
+            //        {
+            //            Type type = typeof(Program);
+
+            //            MethodInfo info = null;
+
+            //            // try to grab the function name via reflection
+            //            if (Regex.IsMatch(arg, @"^Triage.*"))
+            //            {
+            //                // if TriageX(), all good
+            //                info = type.GetMethod(arg);
+            //            }
+            //            else if (Regex.IsMatch(arg, @"^Dump.*"))
+            //            {
+            //                // if DumpX, all good
+            //                info = type.GetMethod(arg);
+            //            }
+            //            else
+            //            {
+            //                // build List<name>()
+            //                info = type.GetMethod(String.Format("List{0}", arg));
+            //            }
+
+            //            if (info == null)
+            //            {
+            //                Console.WriteLine("[X] Check \"{0}\" not found!", arg);
+            //            }
+            //            else
+            //            {
+            //                info.Invoke(null, new object[] { });
+            //            }
+            //        }
+            //    }
+            //}
+            //else
+            //{
+            //    Usage();
+            //    return;
+            //}
+
+            LogToFile.SetPath(".\\testoutnew.txt");
+            LogToFile.enableLogging = true;
+            ;
+            if (LogToFile.enableLogging)
             {
-                foreach (string arg in args)
-                {
-                    if (string.Equals(arg, "full", StringComparison.CurrentCultureIgnoreCase))
-                    {
-                        FilterResults.filter = false;
-                    }
-                }
-
-                foreach (string arg in args)
-                {
-                    if (string.Equals(arg, "full", StringComparison.CurrentCultureIgnoreCase))
-                    {
-                        FilterResults.filter = false;
-                        if (args.Length == 1)
-                        {
-                            // if "full" is the only argument, run System and User triage
-                            SystemChecks();
-                            ListKerberosTickets();
-                            UserChecks();
-                            ListIETabs();
-                            ListPatches();
-                            ListRecycleBin();
-
-                            watch.Stop();
-                            Console.WriteLine("\r\n\r\n[*] Completed All Safety Checks with no filtering in {0} seconds\r\n", (watch.ElapsedMilliseconds / 1000));
-                            return;
-                        }
-                    }
-                    if (string.Equals(arg, "all", StringComparison.CurrentCultureIgnoreCase))
-                    {
-                        SystemChecks();
-                        ListKerberosTickets();
-                        UserChecks();
-                        ListIETabs();
-                        ListPatches();
-                        TriageChrome();
-                        TriageFirefox();
-                        ListRecycleBin();
-                        ListInterestingFiles();
-
-                        watch.Stop();
-                        Console.WriteLine("\r\n\r\n[*] Completed All Safety Checks in {0} seconds\r\n", (watch.ElapsedMilliseconds / 1000));
-                        return;
-                    }
-                }
-
-                foreach (string arg in args)
-                {
-                    if (string.Equals(arg, "full", StringComparison.CurrentCultureIgnoreCase)) { }
-                    else if (string.Equals(arg, "system", StringComparison.CurrentCultureIgnoreCase))
-                    {
-                        SystemChecks();
-                    }
-                    else if (string.Equals(arg, "user", StringComparison.CurrentCultureIgnoreCase))
-                    {
-                        UserChecks();
-                    }
-                    else
-                    {
-                        Type type = typeof(Program);
-
-                        MethodInfo info = null;
-
-                        // try to grab the function name via reflection
-                        if (Regex.IsMatch(arg, @"^Triage.*"))
-                        {
-                            // if TriageX(), all good
-                            info = type.GetMethod(arg);
-                        }
-                        else if (Regex.IsMatch(arg, @"^Dump.*"))
-                        {
-                            // if DumpX, all good
-                            info = type.GetMethod(arg);
-                        }
-                        else
-                        {
-                            // build List<name>()
-                            info = type.GetMethod(String.Format("List{0}", arg));
-                        }
-
-                        if (info == null)
-                        {
-                            Console.WriteLine("[X] Check \"{0}\" not found!", arg);
-                        }
-                        else
-                        {
-                            info.Invoke(null, new object[] { });
-                        }
-                    }
-                }
+                PrintLogo();
             }
-            else
-            {
-                Usage();
-                return;
-            }
+            FilterResults.filter = false;
+            SystemChecks();
+            ListKerberosTickets();
+            UserChecks();
+            ListIETabs();
+            ListPatches();
+            TriageChrome();
+            TriageFirefox();
+            ListRecycleBin();
+            ListInterestingFiles();
 
             watch.Stop();
             Console.WriteLine("\r\n\r\n[*] Completed Safety Checks in {0} seconds\r\n", (watch.ElapsedMilliseconds / 1000));
+            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\r\n\r\n[*] Completed Safety Checks in {0} seconds\r\n", (watch.ElapsedMilliseconds / 1000))); }
+            return;
         }
     }
 }
