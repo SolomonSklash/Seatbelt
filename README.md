@@ -5,6 +5,9 @@ the OPSEC goals of the original prject, but it is nice to have the output in a f
 about dropping files to disk, such as Hack The Box, CTFs, or labs. This also removes the need to capture the output in the Cobalt
 Strike scrollback buffer, which can sometimes get cutoff when using Seatbelt with the `full`/`all` parameters.
 
+One additional argument has been added: `output:PATH`. Provide this argument along with your desired checks and Seatbelt will
+create an output file with the equivalent terminal output at the specified path. Relative and complete paths both work.
+
 ----
 
 Seatbelt is a C# project that performs a number of security oriented host-survey "safety checks" relevant from both offensive and defensive security perspectives.
