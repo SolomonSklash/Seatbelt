@@ -1,22 +1,4 @@
-﻿/*
- * TODO:
- * [ ] create argument for writing to a file and the file path
- * [ ] check that we have write access to file path
- * [ ] exit if we don't have write access to file path
- * [x] create file object
- * [x] check that we opened file object successfully
- * [x] find out how to write to the file
- * [ ] locate each Console.WriteLine and add a file write
- * [ ] close the file at the end of the program
- * 
- * [x] Create class/function that takes a string to print and the file path
- * [ ] Create input parameter for file path: /output:path
- * [ ] Create FilterResults equivalent to check whether to log to file
- * [ ] Handle case of path not existing/being writable (bool to control whether or not to write to file, and continue to write to standard out?)
- * [ ] Create New overloaded print method to handle Console.Write as well as LogToFile.Write
- */
-
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -52,14 +34,15 @@ namespace Seatbelt
             if (LogToFile.IsWritable())
             {
                 LogToFile.SetWritable();
+                LogToFile.enableLogging = true;
             }
         }
-        public static string GetPath()
+        private static string GetPath()
         {
             return path;
         }
 
-        public static bool writable = false;
+        private static bool writable = false;
         private static bool GetWritable()
         {
             return writable;
@@ -99,6 +82,7 @@ namespace Seatbelt
             }
             catch
             {
+                Console.WriteLine("[X] WARNING: The output file path provided is not writable/cannot be accessed.");
                 return false;
             }
             
@@ -108,7 +92,11 @@ namespace Seatbelt
                 if (canWrite)
                     return true;
                 else
+                {
+                    Console.WriteLine("  [X] WARNING: The output file path provided is not writable/cannot be accessed.");
                     return false;
+                }
+                    
             }
         }
 
@@ -7568,130 +7556,132 @@ namespace Seatbelt
 
             var watch = System.Diagnostics.Stopwatch.StartNew();
 
-            //if (args.Length != 0)
-            //{
-            //    foreach (string arg in args)
-            //    {
-            //        if (string.Equals(arg, "full", StringComparison.CurrentCultureIgnoreCase))
-            //        {
-            //            FilterResults.filter = false;
-            //        }
-            //    }
-
-            //    foreach (string arg in args)
-            //    {
-            //        if (string.Equals(arg, "full", StringComparison.CurrentCultureIgnoreCase))
-            //        {
-            //            FilterResults.filter = false;
-            //            if (args.Length == 1)
-            //            {
-            //                // if "full" is the only argument, run System and User triage
-            //                SystemChecks();
-            //                ListKerberosTickets();
-            //                UserChecks();
-            //                ListIETabs();
-            //                ListPatches();
-            //                ListRecycleBin();
-
-            //                watch.Stop();
-            //                Console.WriteLine("\r\n\r\n[*] Completed All Safety Checks with no filtering in {0} seconds\r\n", (watch.ElapsedMilliseconds / 1000));
-            //                if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\r\n\r\n[*] Completed All Safety Checks with no filtering in {0} seconds\r\n", (watch.ElapsedMilliseconds / 1000))); }
-            //                fs.Close();
-            //                return;
-            //            }
-            //        }
-            //        if (string.Equals(arg, "all", StringComparison.CurrentCultureIgnoreCase))
-            //        {
-            //            SystemChecks();
-            //            ListKerberosTickets();
-            //            UserChecks();
-            //            ListIETabs();
-            //            ListPatches();
-            //            TriageChrome();
-            //            TriageFirefox();
-            //            ListRecycleBin();
-            //            ListInterestingFiles();
-            //            fs.Close();
-            //            watch.Stop();
-            //            Console.WriteLine("\r\n\r\n[*] Completed All Safety Checks in {0} seconds\r\n", (watch.ElapsedMilliseconds / 1000));
-            //            if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\r\n\r\n[*] Completed All Safety Checks in {0} seconds\r\n", (watch.ElapsedMilliseconds / 1000))); }
-            //            return;
-            //        }
-            //    }
-
-            //    foreach (string arg in args)
-            //    {
-            //        if (string.Equals(arg, "full", StringComparison.CurrentCultureIgnoreCase)) { }
-            //        else if (string.Equals(arg, "system", StringComparison.CurrentCultureIgnoreCase))
-            //        {
-            //            SystemChecks();
-            //        }
-            //        else if (string.Equals(arg, "user", StringComparison.CurrentCultureIgnoreCase))
-            //        {
-            //            UserChecks();
-            //        }
-            //        else
-            //        {
-            //            Type type = typeof(Program);
-
-            //            MethodInfo info = null;
-
-            //            // try to grab the function name via reflection
-            //            if (Regex.IsMatch(arg, @"^Triage.*"))
-            //            {
-            //                // if TriageX(), all good
-            //                info = type.GetMethod(arg);
-            //            }
-            //            else if (Regex.IsMatch(arg, @"^Dump.*"))
-            //            {
-            //                // if DumpX, all good
-            //                info = type.GetMethod(arg);
-            //            }
-            //            else
-            //            {
-            //                // build List<name>()
-            //                info = type.GetMethod(String.Format("List{0}", arg));
-            //            }
-
-            //            if (info == null)
-            //            {
-            //                Console.WriteLine("[X] Check \"{0}\" not found!", arg);
-            //            }
-            //            else
-            //            {
-            //                info.Invoke(null, new object[] { });
-            //            }
-            //        }
-            //    }
-            //}
-            //else
-            //{
-            //    Usage();
-            //    return;
-            //}
-
-            LogToFile.SetPath(".\\testoutnew.txt");
-            LogToFile.enableLogging = true;
-            ;
-            if (LogToFile.enableLogging)
+            if (args.Length != 0)
             {
-                PrintLogo();
+                foreach (string arg in args)
+                {
+                    if (string.Equals(arg, "full", StringComparison.CurrentCultureIgnoreCase))
+                    {
+                        FilterResults.filter = false;
+                    }
+                }
+
+                // check for output flag and set path for output file
+                string outputDelimiter = "output:";
+                string pathArg = "";
+                foreach (string arg in args)
+                {
+                    if (arg.Contains(outputDelimiter))
+                    {
+                        if (args.Length == 1)
+                        {
+                            Console.WriteLine("[X] One or more check types must be provided along with the output path.");
+                            return;
+                        }
+                        else
+                        {
+                            string[] pathArray = arg.Split(':');
+                            pathArg = String.Join(":", pathArray).Remove(0, outputDelimiter.Length);
+                            LogToFile.SetPath(pathArg);
+                        }
+                    }
+                }
+
+                foreach (string arg in args)
+                {
+                    if (string.Equals(arg, "full", StringComparison.CurrentCultureIgnoreCase))
+                    {
+                        FilterResults.filter = false;
+
+                        SystemChecks();
+                        ListKerberosTickets();
+                        UserChecks();
+                        ListIETabs();
+                        ListPatches();
+                        ListRecycleBin();
+
+                        watch.Stop();
+                        Console.WriteLine("\r\n\r\n[*] Completed All Safety Checks with no filtering in {0} seconds\r\n", (watch.ElapsedMilliseconds / 1000));
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\r\n\r\n[*] Completed All Safety Checks with no filtering in {0} seconds\r\n", (watch.ElapsedMilliseconds / 1000))); }
+                        return;
+                    }
+                    if (string.Equals(arg, "all", StringComparison.CurrentCultureIgnoreCase))
+                    {
+                        SystemChecks();
+                        ListKerberosTickets();
+                        UserChecks();
+                        ListIETabs();
+                        ListPatches();
+                        TriageChrome();
+                        TriageFirefox();
+                        ListRecycleBin();
+                        ListInterestingFiles();
+
+                        watch.Stop();
+                        Console.WriteLine("\r\n\r\n[*] Completed All Safety Checks in {0} seconds\r\n", (watch.ElapsedMilliseconds / 1000));
+                        if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\r\n\r\n[*] Completed All Safety Checks in {0} seconds\r\n", (watch.ElapsedMilliseconds / 1000))); }
+                        return;
+                    }
+                }
+
+                foreach (string arg in args)
+                {
+                    if (string.Equals(arg, "full", StringComparison.CurrentCultureIgnoreCase)) { }
+                    else if (string.Equals(arg, "system", StringComparison.CurrentCultureIgnoreCase))
+                    {
+                        SystemChecks();
+                    }
+                    else if (string.Equals(arg, "user", StringComparison.CurrentCultureIgnoreCase))
+                    {
+                        UserChecks();
+                    }
+                    else if (arg.Contains(outputDelimiter))
+                    {
+                        continue;
+                    }
+                    else
+                    {
+                        Type type = typeof(Program);
+
+                        MethodInfo info = null;
+
+                        // try to grab the function name via reflection
+                        if (Regex.IsMatch(arg, @"^Triage.*"))
+                        {
+                            // if TriageX(), all good
+                            info = type.GetMethod(arg);
+                        }
+                        else if (Regex.IsMatch(arg, @"^Dump.*"))
+                        {
+                            // if DumpX, all good
+                            info = type.GetMethod(arg);
+                        }
+                        else
+                        {
+                            // build List<name>()
+                            info = type.GetMethod(String.Format("List{0}", arg));
+                        }
+
+                        if (info == null)
+                        {
+                            Console.WriteLine("[X] Check \"{0}\" not found!", arg);
+                        }
+                        else
+                        {
+                            info.Invoke(null, new object[] { });
+                        }
+                    }
+                }
             }
-            FilterResults.filter = false;
-            SystemChecks();
-            ListKerberosTickets();
-            UserChecks();
-            ListIETabs();
-            ListPatches();
-            TriageChrome();
-            TriageFirefox();
-            ListRecycleBin();
-            ListInterestingFiles();
+            else
+            {
+                Usage();
+                return;
+            }
 
             watch.Stop();
             Console.WriteLine("\r\n\r\n[*] Completed Safety Checks in {0} seconds\r\n", (watch.ElapsedMilliseconds / 1000));
             if (LogToFile.enableLogging) { LogToFile.Write(String.Format("\r\n\r\n[*] Completed Safety Checks in {0} seconds\r\n", (watch.ElapsedMilliseconds / 1000))); }
-            return;
         }
     }
 }
